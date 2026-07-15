@@ -26,7 +26,7 @@ export default async function RafflePage({
             id: `${raffle.id}-legacy`,
             title: raffle.prize,
             description: null,
-            imageUrl: raffle.imageUrl,
+            imageUrl: null,
             position: 1,
           },
         ];
@@ -40,17 +40,23 @@ export default async function RafflePage({
 
       <main className="mx-auto max-w-5xl space-y-8 px-4 pb-24">
         <section className="animate-fade-up space-y-4">
-          <p className="text-sm uppercase tracking-wider text-primary">
-            {displayPrizes.length === 1 ? "Premio" : "Premios"}
-          </p>
           <h1 className="font-[family-name:var(--font-display)] text-4xl font-bold text-foreground md:text-5xl">
             {raffle.title}
           </h1>
-          <PrizeCarousel prizes={displayPrizes} />
+          {raffle.imageUrl ? (
+            <div className="flex max-h-[50vh] min-h-48 items-center justify-center overflow-hidden rounded-2xl border border-primary/20 bg-black/10 p-3">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={raffle.imageUrl}
+                alt={raffle.title}
+                className="max-h-[calc(50vh-1.5rem)] max-w-full rounded-xl object-contain"
+              />
+            </div>
+          ) : null}
           {raffle.description && (
             <p className="max-w-2xl text-muted-foreground">{raffle.description}</p>
           )}
-          <div className="flex flex-wrap gap-4 pt-2 font-binance-num text-sm text-muted-foreground">
+          <div className="flex flex-wrap gap-4 font-binance-num text-sm text-muted-foreground">
             <span>
               {formatMoney(raffle.pricePerTicket, raffle.currency)} / número
             </span>
@@ -66,6 +72,13 @@ export default async function RafflePage({
               </Link>
             )}
           </div>
+        </section>
+
+        <section className="animate-fade-up space-y-4">
+          <p className="text-sm uppercase tracking-wider text-primary">
+            {displayPrizes.length === 1 ? "Premio" : "Premios"}
+          </p>
+          <PrizeCarousel prizes={displayPrizes} />
         </section>
 
         {raffle.status === "active" ? (

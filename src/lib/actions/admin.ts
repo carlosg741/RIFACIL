@@ -371,7 +371,7 @@ export async function createRaffle(raw: z.infer<typeof raffleSchema>) {
         {
           title: parsed.data.prize,
           description: undefined,
-          imageUrl: parsed.data.imageUrl,
+          imageUrl: undefined,
         },
       ];
   const primaryPrize = prizeRows[0]!;
@@ -404,7 +404,8 @@ export async function createRaffle(raw: z.infer<typeof raffleSchema>) {
     slug,
     description: parsed.data.description || null,
     prize: primaryPrize.title,
-    imageUrl: primaryPrize.imageUrl || null,
+    /** Imagen de identidad (persona, marca o institución), independiente de los premios */
+    imageUrl: parsed.data.imageUrl || null,
     pricePerTicket: parsed.data.pricePerTicket.toFixed(2),
     currency: parsed.data.currency,
     totalTickets: parsed.data.totalTickets,
@@ -497,11 +498,7 @@ export async function updateRaffle(
         raw.description !== undefined ? raw.description || null : current.description,
       prize: primaryPrize?.title ?? raw.prize ?? current.prize,
       imageUrl:
-        primaryPrize !== undefined
-          ? primaryPrize.imageUrl || null
-          : raw.imageUrl !== undefined
-            ? raw.imageUrl || null
-            : current.imageUrl,
+        raw.imageUrl !== undefined ? raw.imageUrl || null : current.imageUrl,
       pricePerTicket:
         raw.pricePerTicket !== undefined
           ? Number(raw.pricePerTicket).toFixed(2)

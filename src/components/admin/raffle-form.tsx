@@ -43,11 +43,13 @@ export function RaffleForm({
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
+  const [uploadingCover, setUploadingCover] = useState(false);
   const [uploadingIndex, setUploadingIndex] = useState<number | null>(null);
   const [status, setStatus] = useState(raffle?.status || "active");
   const [drawAt, setDrawAt] = useState(
     raffle?.drawAt ? toLocalDateTimeValue(new Date(raffle.drawAt)) : "",
   );
+  const [coverImageUrl, setCoverImageUrl] = useState(raffle?.imageUrl || "");
   const [prizes, setPrizes] = useState<PrizeDraft[]>(() => {
     if (initialPrizes.length > 0) {
       return initialPrizes.map((prize) => ({
@@ -63,7 +65,7 @@ export function RaffleForm({
           key: `${raffle.id}-legacy`,
           title: raffle.prize,
           description: "",
-          imageUrl: raffle.imageUrl || "",
+          imageUrl: "",
         },
       ];
     }
@@ -73,6 +75,7 @@ export function RaffleForm({
     raffle?.donationsEnabled ?? false,
   );
   const isEdit = Boolean(raffle);
+  const uploading = uploadingCover || uploadingIndex !== null;
 
   function updatePrize(index: number, patch: Partial<PrizeDraft>) {
     setPrizes((current) =>
@@ -92,29 +95,47 @@ export function RaffleForm({
     });
   }
 
-  async function onImageSelected(index: number, file: File | undefined) {
+  async function uploadImage(file: File) {
+    const body = new FormData();
+    body.set("image", file);
+    const res = await fetch("/api/upload-raffle-image", {
+      method: "POST",
+      body,
+    });
+    const data = (await res.json()) as {
+      ok: boolean;
+      url?: string;
+      error?: string;
+    };
+    if (!data.ok || !data.url) {
+      throw new Error(data.error || "No se pudo subir la imagen");
+    }
+    return data.url;
+  }
+
+  async function onCoverImageSelected(file: File | undefined) {
+    if (!file) return;
+    setUploadingCover(true);
+    try {
+      const url = await uploadImage(file);
+      setCoverImageUrl(url);
+      toast.success("Imagen de la rifa cargada");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Error al subir la imagen");
+    } finally {
+      setUploadingCover(false);
+    }
+  }
+
+  async function onPrizeImageSelected(index: number, file: File | undefined) {
     if (!file) return;
     setUploadingIndex(index);
     try {
-      const body = new FormData();
-      body.set("image", file);
-      const res = await fetch("/api/upload-raffle-image", {
-        method: "POST",
-        body,
-      });
-      const data = (await res.json()) as {
-        ok: boolean;
-        url?: string;
-        error?: string;
-      };
-      if (!data.ok || !data.url) {
-        toast.error(data.error || "No se pudo subir la imagen");
-        return;
-      }
-      updatePrize(index, { imageUrl: data.url });
+      const url = await uploadImage(file);
+      updatePrize(index, { imageUrl: url });
       toast.success(`Imagen del premio ${index + 1} cargada`);
-    } catch {
-      toast.error("Error al subir la imagen");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Error al subir la imagen");
     } finally {
       setUploadingIndex(null);
     }
@@ -150,7 +171,7 @@ export function RaffleForm({
       winnerCount: normalizedPrizes.length,
       drawAt: drawFromForm,
       status: status as "draft" | "active" | "closed" | "drawn",
-      imageUrl: firstPrize.imageUrl,
+      imageUrl: coverImageUrl.trim(),
       prizes: normalizedPrizes,
       donationsEnabled,
     };
@@ -315,6 +336,66 @@ export function RaffleForm({
         </label>
       </div>
 
+      <div className="space-y-3 rounded-xl border border-primary/30 bg-secondary/30 p-4">
+        <div>
+          <Label>Imagen de la rifa</Label>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Identifica la causa: foto de una persona, logo de una marca o
+            imagen de la institución. Es aparte de los premios.
+          </p>
+        </div>
+
+        {coverImageUrl ? (
+          <div className="relative flex max-h-64 min-h-40 items-center justify-center overflow-hidden rounded-lg border border-border bg-black/10 p-2">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={coverImageUrl}
+              alt="Vista previa de la imagen de la rifa"
+              className="max-h-60 max-w-full rounded-md object-contain"
+            />
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              className="absolute right-2 top-2"
+              onClick={() => setCoverImageUrl("")}
+            >
+              Quitar
+            </Button>
+          </div>
+        ) : null}
+
+        <div className="space-y-2">
+          <Label htmlFor="cover-image">Adjuntar imagen</Label>
+          <input
+            id="cover-image"
+            type="file"
+            accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
+            disabled={uploading || pending}
+            className="block w-full text-sm text-muted-foreground file:mr-3 file:rounded-md file:border-0 file:bg-primary file:px-3 file:py-2 file:text-sm file:font-semibold file:text-primary-foreground hover:file:bg-accent"
+            onChange={(event) => {
+              const file = event.currentTarget.files?.[0];
+              event.currentTarget.value = "";
+              void onCoverImageSelected(file);
+            }}
+          />
+          <p className="text-xs text-muted-foreground">
+            JPG, PNG o WEBP · máx. 8MB
+            {uploadingCover ? " · Subiendo…" : ""}
+          </p>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="cover-image-url">O URL de imagen</Label>
+          <Input
+            id="cover-image-url"
+            value={coverImageUrl}
+            onChange={(event) => setCoverImageUrl(event.target.value)}
+            placeholder="https://..."
+          />
+        </div>
+      </div>
+
       <div className="space-y-4 rounded-xl border border-border bg-secondary/30 p-4">
         <div>
           <Label>Premios e imágenes</Label>
@@ -420,12 +501,12 @@ export function RaffleForm({
                 id={`raffle-image-${index}`}
                 type="file"
                 accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
-                disabled={uploadingIndex !== null || pending}
+                disabled={uploading || pending}
                 className="block w-full text-sm text-muted-foreground file:mr-3 file:rounded-md file:border-0 file:bg-primary file:px-3 file:py-2 file:text-sm file:font-semibold file:text-primary-foreground hover:file:bg-accent"
                 onChange={(event) => {
                   const file = event.currentTarget.files?.[0];
                   event.currentTarget.value = "";
-                  void onImageSelected(index, file);
+                  void onPrizeImageSelected(index, file);
                 }}
               />
               <p className="text-xs text-muted-foreground">
@@ -465,7 +546,7 @@ export function RaffleForm({
       </div>
       <Button
         type="submit"
-        disabled={pending || uploadingIndex !== null || !drawAt}
+        disabled={pending || uploading || !drawAt}
         className="w-full"
       >
         {pending ? "Guardando…" : isEdit ? "Guardar cambios" : "Crear rifa"}
