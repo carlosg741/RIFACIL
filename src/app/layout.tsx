@@ -23,6 +23,9 @@ const plexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_APP_URL || "https://rifacil-rifas.vercel.app",
+  ),
   title: {
     default: "Rifacil — Talonario digital para rifas",
     template: "%s · Rifacil",
@@ -30,8 +33,33 @@ export const metadata: Metadata = {
   description:
     "Crea rifas, gestiona boletos, recibe comprobantes de pago y sortea ganadores con transparencia.",
   icons: {
-    icon: "/rifacil-logo.jpeg",
+    icon: [{ url: "/rifacil-logo.jpeg", type: "image/jpeg" }],
+    shortcut: "/rifacil-logo.jpeg",
     apple: "/rifacil-logo.jpeg",
+  },
+  openGraph: {
+    type: "website",
+    locale: "es_PE",
+    url: "/",
+    siteName: "Rifacil",
+    title: "Rifacil — Talonario digital para rifas",
+    description:
+      "Crea rifas, gestiona boletos, recibe comprobantes de pago y sortea ganadores con transparencia.",
+    images: [
+      {
+        url: "/rifacil-logo.jpeg",
+        width: 1024,
+        height: 727,
+        alt: "Rifacil",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Rifacil — Talonario digital para rifas",
+    description:
+      "Crea rifas, gestiona boletos, recibe comprobantes de pago y sortea ganadores con transparencia.",
+    images: ["/rifacil-logo.jpeg"],
   },
 };
 
