@@ -11,8 +11,16 @@ import { ButtonLink } from "@/components/button-link";
 import { BrandLogo } from "@/components/brand-logo";
 import { WhatsAppFloat } from "@/components/whatsapp-float";
 
+/** Evita PGlite/DB en el build estático de Vercel */
+export const dynamic = "force-dynamic";
+
 export default async function HomePage() {
-  const demoSlug = await getActiveDemoSlug();
+  let demoSlug = "demo";
+  try {
+    demoSlug = await getActiveDemoSlug();
+  } catch {
+    demoSlug = "demo";
+  }
 
   return (
     <div className="flex min-h-full flex-col">

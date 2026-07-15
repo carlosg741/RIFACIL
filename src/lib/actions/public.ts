@@ -330,21 +330,25 @@ export async function getOrderPublic(orderId: string) {
 }
 
 export async function getActiveDemoSlug() {
-  await ensureSchema();
-  const db = await getDb();
-  const [row] = await db
-    .select({ slug: raffles.slug })
-    .from(raffles)
-    .innerJoin(organizations, eq(raffles.organizationId, organizations.id))
-    .where(
-      and(
-        eq(organizations.isPlatform, true),
-        eq(raffles.slug, "demo"),
-        eq(raffles.status, "active"),
-      ),
-    )
-    .limit(1);
-  return row?.slug ?? "demo";
+  try {
+    await ensureSchema();
+    const db = await getDb();
+    const [row] = await db
+      .select({ slug: raffles.slug })
+      .from(raffles)
+      .innerJoin(organizations, eq(raffles.organizationId, organizations.id))
+      .where(
+        and(
+          eq(organizations.isPlatform, true),
+          eq(raffles.slug, "demo"),
+          eq(raffles.status, "active"),
+        ),
+      )
+      .limit(1);
+    return row?.slug ?? "demo";
+  } catch {
+    return "demo";
+  }
 }
 
 const donationSchema = z.object({
