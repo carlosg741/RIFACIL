@@ -98,7 +98,7 @@ export async function notifyPlatformOrderProof(order: {
       `Revisa y aprueba aquí: ${adminUrl}`,
     ].join("\n");
 
-    await sendEmail({
+    const result = await sendEmail({
       to: meta.emails,
       subject,
       text,
@@ -114,6 +114,12 @@ export async function notifyPlatformOrderProof(order: {
         <p><a href="${adminUrl}">Entrar a Órdenes y aprobar</a></p>
       `,
     });
+    if (!result.ok) {
+      console.error(
+        "[notify] order email not sent",
+        "skipped" in result && result.skipped ? "SMTP not configured" : result.error,
+      );
+    }
   } catch (err) {
     console.error("[notify] order proof failed", err);
   }
@@ -145,7 +151,7 @@ export async function notifyPlatformDonationProof(donation: {
       `Revisa aquí: ${adminUrl}`,
     ].join("\n");
 
-    await sendEmail({
+    const result = await sendEmail({
       to: meta.emails,
       subject,
       text,
@@ -160,6 +166,12 @@ export async function notifyPlatformDonationProof(donation: {
         <p><a href="${adminUrl}">Entrar a Donaciones</a></p>
       `,
     });
+    if (!result.ok) {
+      console.error(
+        "[notify] donation email not sent",
+        "skipped" in result && result.skipped ? "SMTP not configured" : result.error,
+      );
+    }
   } catch (err) {
     console.error("[notify] donation proof failed", err);
   }

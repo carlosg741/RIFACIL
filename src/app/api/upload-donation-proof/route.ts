@@ -68,7 +68,7 @@ export async function POST(request: Request) {
       revalidatePath("/admin/donaciones");
     }
 
-    void notifyPlatformDonationProof({
+    await notifyPlatformDonationProof({
       id: donation.id,
       raffleId: donation.raffleId,
       donorName: donation.donorName,

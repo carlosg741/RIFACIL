@@ -100,7 +100,8 @@ export async function POST(request: Request) {
     }
 
     // Solo rifas del super admin (org plataforma). Clientes no reciben correo.
-    void notifyPlatformOrderProof({
+    // Esperar el SMTP evita que Vercel cierre la función antes de enviarlo.
+    await notifyPlatformOrderProof({
       id: order.id,
       raffleId: order.raffleId,
       participantName: order.participantName,

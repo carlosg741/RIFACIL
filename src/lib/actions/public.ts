@@ -279,7 +279,7 @@ export async function submitPaymentProof(formData: FormData) {
       revalidatePath("/admin/ordenes");
     }
 
-    void notifyPlatformOrderProof({
+    await notifyPlatformOrderProof({
       id: order.id,
       raffleId: order.raffleId,
       participantName: order.participantName,
