@@ -10,6 +10,7 @@ const baseLinks = [
   { href: "/admin/ordenes", label: "Órdenes" },
   { href: "/admin/donaciones", label: "Donaciones" },
   { href: "/admin/metodos-pago", label: "Métodos de pago" },
+  { href: "/admin/cuenta", label: "Mi cuenta" },
 ];
 
 export default async function AdminLayout({

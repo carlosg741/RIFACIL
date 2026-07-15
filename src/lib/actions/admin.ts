@@ -66,6 +66,74 @@ async function requireSuperAdmin() {
   return user;
 }
 
+const changePasswordSchema = z
+  .object({
+    currentPassword: z.string().min(1, "Ingresa tu contraseña actual."),
+    newPassword: z
+      .string()
+      .min(8, "La nueva contraseña debe tener al menos 8 caracteres.")
+      .max(100),
+    confirmPassword: z.string().min(1, "Confirma la nueva contraseña."),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: "Las contraseñas nuevas no coinciden.",
+    path: ["confirmPassword"],
+  });
+
+export async function changeOwnPassword(
+  raw: z.infer<typeof changePasswordSchema>,
+) {
+  const user = await requireAdmin();
+  const parsed = changePasswordSchema.safeParse(raw);
+  if (!parsed.success) {
+    return {
+      ok: false as const,
+      error: parsed.error.issues[0]?.message || "Datos inválidos.",
+    };
+  }
+
+  const db = await getDb();
+  const [account] = await db
+    .select({ passwordHash: users.passwordHash })
+    .from(users)
+    .where(eq(users.id, user.id))
+    .limit(1);
+
+  if (!account) {
+    return { ok: false as const, error: "Cuenta no encontrada." };
+  }
+
+  const currentIsValid = await bcrypt.compare(
+    parsed.data.currentPassword,
+    account.passwordHash,
+  );
+  if (!currentIsValid) {
+    return {
+      ok: false as const,
+      error: "La contraseña actual es incorrecta.",
+    };
+  }
+
+  const reusesCurrent = await bcrypt.compare(
+    parsed.data.newPassword,
+    account.passwordHash,
+  );
+  if (reusesCurrent) {
+    return {
+      ok: false as const,
+      error: "La nueva contraseña debe ser diferente a la actual.",
+    };
+  }
+
+  const passwordHash = await bcrypt.hash(parsed.data.newPassword, 12);
+  await db
+    .update(users)
+    .set({ passwordHash })
+    .where(eq(users.id, user.id));
+
+  return { ok: true as const };
+}
+
 export async function getAdminDashboard() {
   const user = await requireAdmin();
   await ensureSchema();
