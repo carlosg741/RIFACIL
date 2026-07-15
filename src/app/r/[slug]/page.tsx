@@ -33,12 +33,12 @@ export default async function RafflePage({
           </h1>
           <p className="text-xl text-primary">{raffle.prize}</p>
           {raffle.imageUrl && (
-            <div className="overflow-hidden rounded-2xl border border-primary/20">
+            <div className="flex max-h-[70vh] min-h-56 items-center justify-center overflow-hidden rounded-2xl border border-primary/20 bg-black/20 p-2">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={raffle.imageUrl}
                 alt={raffle.prize}
-                className="max-h-[420px] w-full object-cover"
+                className="max-h-[calc(70vh-1rem)] max-w-full rounded-xl object-contain"
               />
             </div>
           )}
