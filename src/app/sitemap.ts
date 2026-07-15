@@ -10,13 +10,14 @@ function siteUrl() {
   );
 }
 
-export const dynamic = "force-dynamic";
+/** Cachea 1 hora: más rápido y estable para Googlebot */
+export const revalidate = 3600;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = siteUrl();
   const entries: MetadataRoute.Sitemap = [
     {
-      url: base,
+      url: `${base}/`,
       lastModified: new Date(),
       changeFrequency: "weekly",
       priority: 1,
@@ -52,7 +53,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       }
     }
   } catch {
-    /* Si la DB no está disponible en build, al menos indexamos la home */
+    /* Si la DB falla, al menos devolvemos la home */
   }
 
   return entries;

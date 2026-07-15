@@ -10,12 +10,14 @@ function siteUrl() {
 export default function robots(): MetadataRoute.Robots {
   const base = siteUrl();
   return {
-    rules: {
-      userAgent: "*",
-      allow: "/",
-      disallow: ["/admin/", "/login", "/api/"],
-    },
+    rules: [
+      {
+        userAgent: "*",
+        allow: "/",
+        disallow: ["/admin/", "/login", "/api/"],
+      },
+    ],
     sitemap: `${base}/sitemap.xml`,
-    host: base,
+    host: new URL(base).host,
   };
 }
