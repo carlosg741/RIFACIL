@@ -1,6 +1,11 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import { LoginForm } from "@/components/admin/login-form";
 import { BrandLogo } from "@/components/brand-logo";
+
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+};
 
 export default function LoginPage() {
   return (

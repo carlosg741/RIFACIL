@@ -1,8 +1,13 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
 import { redirect } from "next/navigation";
 import { auth, signOut } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
+
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+};
 
 const baseLinks = [
   { href: "/admin", label: "Dashboard" },
