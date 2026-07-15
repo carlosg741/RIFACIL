@@ -290,6 +290,14 @@ export async function ensureSchema() {
     globalThis.__rifacilSchemaReady = (async () => {
       const url = getDatabaseUrl();
       if (url && isNeonUrl(url)) {
+        // Neon: aplicar schema base (CREATE IF NOT EXISTS) igual que PGlite
+        const client = neon(url);
+        // El driver HTTP ejecuta una sentencia a la vez; separar con cuidado
+        // de bloques DO $$ ... $$;
+        const parts = splitSqlStatements(SCHEMA_SQL);
+        for (const statement of parts) {
+          await client.query(statement);
+        }
         return;
       }
       const client = await getPglite();
@@ -299,4 +307,31 @@ export async function ensureSchema() {
   await globalThis.__rifacilSchemaReady;
   // Siempre: añade columnas nuevas sin borrar datos existentes
   await applyMigrations();
+}
+
+/** Separa SQL en statements, respetando bloques DO $$ … $$. */
+function splitSqlStatements(sql: string): string[] {
+  const statements: string[] = [];
+  let current = "";
+  let inDollar = false;
+  for (let i = 0; i < sql.length; i++) {
+    const ch = sql[i]!;
+    const next = sql[i + 1];
+    if (ch === "$" && next === "$") {
+      inDollar = !inDollar;
+      current += "$$";
+      i++;
+      continue;
+    }
+    if (ch === ";" && !inDollar) {
+      const trimmed = current.trim();
+      if (trimmed) statements.push(trimmed);
+      current = "";
+      continue;
+    }
+    current += ch;
+  }
+  const trimmed = current.trim();
+  if (trimmed) statements.push(trimmed);
+  return statements;
 }
