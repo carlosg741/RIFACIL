@@ -1,0 +1,210 @@
+"use client";
+
+import { useRef, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { createDonation } from "@/lib/actions/public";
+import { formatMoney } from "@/lib/format";
+import type { PaymentMethod, Raffle } from "@/db/schema";
+import { PaymentMethodDetails } from "@/components/raffle/payment-method-details";
+
+export function DonationCheckout({
+  raffle,
+  paymentMethods,
+  onBack,
+}: {
+  raffle: Raffle;
+  paymentMethods: PaymentMethod[];
+  onBack: () => void;
+}) {
+  const router = useRouter();
+  const proofRef = useRef<HTMLInputElement>(null);
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
+  const [amount, setAmount] = useState("");
+  const [paymentMethodId, setPaymentMethodId] = useState(
+    paymentMethods[0]?.id ?? "",
+  );
+  const [pending, startTransition] = useTransition();
+
+  const method = paymentMethods.find((m) => m.id === paymentMethodId);
+  const amountNum = Number(amount);
+
+  function submit() {
+    if (!name || !phone || !paymentMethodId) {
+      toast.error("Completa nombre, teléfono y método de pago.");
+      return;
+    }
+    if (!amountNum || amountNum <= 0) {
+      toast.error("Ingresa un monto válido para donar.");
+      return;
+    }
+    const file = proofRef.current?.files?.[0];
+    if (!file) {
+      toast.error("Adjunta el comprobante de tu donación.");
+      return;
+    }
+
+    startTransition(async () => {
+      const created = await createDonation({
+        raffleId: raffle.id,
+        amount: amountNum,
+        name,
+        phone,
+        email,
+        paymentMethodId,
+      });
+      if (!created.ok) {
+        toast.error(created.error);
+        return;
+      }
+
+      const body = new FormData();
+      body.set("donationId", created.donationId);
+      body.set("proof", file);
+      const res = await fetch("/api/upload-donation-proof", {
+        method: "POST",
+        body,
+      });
+      const data = (await res.json()) as { ok: boolean; error?: string };
+      if (!data.ok) {
+        toast.error(data.error || "No se pudo subir el comprobante");
+        router.push(`/r/${created.slug}/donacion/${created.donationId}`);
+        return;
+      }
+
+      toast.success("Donación enviada. Gracias por colaborar.");
+      router.push(`/r/${created.slug}/donacion/${created.donationId}`);
+    });
+  }
+
+  return (
+    <div className="mx-auto max-w-lg space-y-6 rounded-2xl border border-border bg-card p-6 shadow-sm">
+      <div>
+        <h2 className="font-[family-name:var(--font-display)] text-2xl font-bold text-primary">
+          Completa tu donación
+        </h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Aporta a “{raffle.title}” sin necesidad de tomar un número de la rifa.
+        </p>
+      </div>
+
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="donor-name">Nombre completo</Label>
+          <Input
+            id="donor-name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Tu nombre"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="donor-phone">WhatsApp / teléfono</Label>
+          <Input
+            id="donor-phone"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            placeholder="999 888 777"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="donor-email">Email (opcional)</Label>
+          <Input
+            id="donor-email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="tu@email.com"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="donor-amount">Monto a donar ({raffle.currency})</Label>
+          <Input
+            id="donor-amount"
+            type="number"
+            min="1"
+            step="0.01"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            placeholder="Ej. 20"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label>Método de pago</Label>
+            <Select
+              value={paymentMethodId}
+              items={paymentMethods.map((m) => ({
+                value: m.id,
+                label: m.name,
+              }))}
+              onValueChange={(v) => setPaymentMethodId(v ?? "")}
+            >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Elige cómo pagar" />
+            </SelectTrigger>
+            <SelectContent>
+              {paymentMethods.map((m) => (
+                <SelectItem key={m.id} value={m.id}>
+                  {m.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {method && (
+        <PaymentMethodDetails
+          method={method}
+          amountLine={
+            amountNum > 0
+              ? `Monto a donar: ${formatMoney(amountNum, raffle.currency)}`
+              : undefined
+          }
+        />
+      )}
+
+      <div className="space-y-2">
+        <Label htmlFor="donation-proof">Comprobante de pago</Label>
+        <input
+          ref={proofRef}
+          id="donation-proof"
+          type="file"
+          accept="image/*,application/pdf,.jpg,.jpeg,.png,.webp,.pdf"
+          required
+          className="block w-full text-sm text-muted-foreground file:mr-3 file:rounded-md file:border-0 file:bg-primary file:px-3 file:py-2 file:text-sm file:font-semibold file:text-primary-foreground"
+        />
+      </div>
+
+      <div className="flex gap-3">
+        <Button
+          variant="outline"
+          className="flex-1"
+          onClick={onBack}
+          disabled={pending}
+        >
+          Volver
+        </Button>
+        <Button
+          className="flex-1"
+          onClick={submit}
+          disabled={pending || paymentMethods.length === 0}
+        >
+          {pending ? "Enviando…" : "Continuar"}
+        </Button>
+      </div>
+    </div>
+  );
+}
