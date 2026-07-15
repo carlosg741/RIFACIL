@@ -11,6 +11,7 @@ import {
   orders,
   paymentMethods,
   paymentProofs,
+  rafflePrizes,
   raffles,
   tickets,
 } from "@/db/schema";
@@ -61,7 +62,13 @@ export async function getRaffleBySlug(slug: string) {
     )
     .orderBy(asc(paymentMethods.sortOrder));
 
-  return { raffle, tickets: ticketRows, paymentMethods: methods };
+  const prizes = await db
+    .select()
+    .from(rafflePrizes)
+    .where(eq(rafflePrizes.raffleId, raffle.id))
+    .orderBy(asc(rafflePrizes.position));
+
+  return { raffle, prizes, tickets: ticketRows, paymentMethods: methods };
 }
 
 export async function createReservation(input: {

@@ -34,7 +34,11 @@ export default async function DrawPublicPage({
           <h1 className="mt-2 font-[family-name:var(--font-display)] text-4xl text-primary">
             {raffle.title}
           </h1>
-          <p className="mt-2 text-primary/80">{raffle.prize}</p>
+          <p className="mt-2 text-primary/80">
+            {raffle.winnerCount === 1
+              ? "1 premio"
+              : `${raffle.winnerCount} premios`}
+          </p>
         </div>
 
         {!draw ? (
@@ -47,17 +51,37 @@ export default async function DrawPublicPage({
               {winners.map((w) => (
                 <div
                   key={w.id}
-                  className="animate-fade-up rounded-2xl border bg-card p-6 shadow-sm"
+                  className="animate-fade-up overflow-hidden rounded-2xl border bg-card shadow-sm sm:flex"
                 >
-                  <p className="text-sm text-muted-foreground">
-                    Premio #{w.prizePosition}
-                  </p>
-                  <p className="mt-1 font-[family-name:var(--font-display)] text-5xl font-semibold text-primary">
-                    {formatTicketNumber(w.ticketNumber, digits)}
-                  </p>
-                  <p className="mt-2 font-medium">
-                    {w.participantName || "Participante"}
-                  </p>
+                  {w.prizeImageUrl ? (
+                    <div className="flex min-h-48 items-center justify-center bg-black/10 p-3 sm:w-56 sm:shrink-0">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={w.prizeImageUrl}
+                        alt={w.prizeTitle || `Premio ${w.prizePosition}`}
+                        className="max-h-56 max-w-full rounded-lg object-contain"
+                      />
+                    </div>
+                  ) : null}
+                  <div className="p-6">
+                    <p className="text-sm text-muted-foreground">
+                      Premio #{w.prizePosition}
+                    </p>
+                    <p className="mt-1 text-lg font-semibold text-foreground">
+                      {w.prizeTitle || raffle.prize}
+                    </p>
+                    {w.prizeDescription ? (
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        {w.prizeDescription}
+                      </p>
+                    ) : null}
+                    <p className="mt-4 font-[family-name:var(--font-display)] text-5xl font-semibold text-primary">
+                      {formatTicketNumber(w.ticketNumber, digits)}
+                    </p>
+                    <p className="mt-2 font-medium">
+                      {w.participantName || "Participante"}
+                    </p>
+                  </div>
                 </div>
               ))}
             </div>

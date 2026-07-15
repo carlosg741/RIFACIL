@@ -134,6 +134,29 @@ export const raffles = pgTable(
   ],
 );
 
+export const rafflePrizes = pgTable(
+  "raffle_prizes",
+  {
+    id: id(),
+    raffleId: text("raffle_id")
+      .notNull()
+      .references(() => raffles.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    description: text("description"),
+    imageUrl: text("image_url"),
+    position: integer("position").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [
+    uniqueIndex("raffle_prizes_raffle_position_idx").on(
+      t.raffleId,
+      t.position,
+    ),
+  ],
+);
+
 export const donations = pgTable(
   "donations",
   {
@@ -284,7 +307,15 @@ export const rafflesRelations = relations(raffles, ({ one, many }) => ({
   orders: many(orders),
   donations: many(donations),
   paymentMethods: many(paymentMethods),
+  prizes: many(rafflePrizes),
   draw: one(draws),
+}));
+
+export const rafflePrizesRelations = relations(rafflePrizes, ({ one }) => ({
+  raffle: one(raffles, {
+    fields: [rafflePrizes.raffleId],
+    references: [raffles.id],
+  }),
 }));
 
 export const donationsRelations = relations(donations, ({ one }) => ({
@@ -333,6 +364,7 @@ export const drawsRelations = relations(draws, ({ one, many }) => ({
 export type Organization = typeof organizations.$inferSelect;
 export type User = typeof users.$inferSelect;
 export type Raffle = typeof raffles.$inferSelect;
+export type RafflePrize = typeof rafflePrizes.$inferSelect;
 export type Ticket = typeof tickets.$inferSelect;
 export type Order = typeof orders.$inferSelect;
 export type PaymentMethod = typeof paymentMethods.$inferSelect;

@@ -120,6 +120,18 @@ CREATE TABLE IF NOT EXISTS raffles (
 CREATE UNIQUE INDEX IF NOT EXISTS raffles_org_slug_idx ON raffles(organization_id, slug);
 CREATE INDEX IF NOT EXISTS raffles_slug_idx ON raffles(slug);
 
+CREATE TABLE IF NOT EXISTS raffle_prizes (
+  id text PRIMARY KEY,
+  raffle_id text NOT NULL REFERENCES raffles(id) ON DELETE CASCADE,
+  title text NOT NULL,
+  description text,
+  image_url text,
+  position integer NOT NULL,
+  created_at timestamptz DEFAULT now() NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS raffle_prizes_raffle_position_idx
+  ON raffle_prizes(raffle_id, position);
+
 CREATE TABLE IF NOT EXISTS payment_methods (
   id text PRIMARY KEY,
   organization_id text NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
@@ -255,6 +267,27 @@ const MIGRATIONS = [
   `ALTER TABLE organizations ADD COLUMN IF NOT EXISTS is_platform boolean NOT NULL DEFAULT false`,
   `ALTER TABLE organizations ADD COLUMN IF NOT EXISTS active boolean NOT NULL DEFAULT true`,
   `ALTER TABLE users ADD COLUMN IF NOT EXISTS active boolean NOT NULL DEFAULT true`,
+  `CREATE TABLE IF NOT EXISTS raffle_prizes (
+    id text PRIMARY KEY,
+    raffle_id text NOT NULL REFERENCES raffles(id) ON DELETE CASCADE,
+    title text NOT NULL,
+    description text,
+    image_url text,
+    position integer NOT NULL,
+    created_at timestamptz DEFAULT now() NOT NULL
+  )`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS raffle_prizes_raffle_position_idx
+   ON raffle_prizes(raffle_id, position)`,
+  // Conserva las rifas existentes como un primer premio.
+  `INSERT INTO raffle_prizes (
+     id, raffle_id, title, image_url, position
+   )
+   SELECT
+     r.id || '-legacy-prize', r.id, r.prize, r.image_url, 1
+   FROM raffles r
+   WHERE NOT EXISTS (
+     SELECT 1 FROM raffle_prizes rp WHERE rp.raffle_id = r.id
+   )`,
   // Org rifacil (o la más antigua) → plataforma; su admin legado → super_admin
   `UPDATE organizations
    SET is_platform = true

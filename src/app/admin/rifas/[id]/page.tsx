@@ -2,7 +2,10 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { getRaffleForAdmin } from "@/lib/actions/admin";
+import {
+  getRaffleForAdmin,
+  getRafflePrizesForAdmin,
+} from "@/lib/actions/admin";
 import { countTicketStats } from "@/lib/tickets";
 import { RaffleForm } from "@/components/admin/raffle-form";
 import { RaffleSharePanel } from "@/components/admin/raffle-share-panel";
@@ -18,7 +21,10 @@ export default async function AdminRaffleDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const raffle = await getRaffleForAdmin(id);
+  const [raffle, prizes] = await Promise.all([
+    getRaffleForAdmin(id),
+    getRafflePrizesForAdmin(id),
+  ]);
   if (!raffle) notFound();
   const stats = await countTicketStats(raffle.id);
 
@@ -99,7 +105,7 @@ export default async function AdminRaffleDetailPage({
       {raffle.status !== "drawn" && (
         <section>
           <h2 className="mb-3 font-semibold text-primary">Editar</h2>
-          <RaffleForm raffle={raffle} />
+          <RaffleForm raffle={raffle} initialPrizes={prizes} />
         </section>
       )}
     </div>

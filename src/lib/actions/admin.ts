@@ -15,6 +15,7 @@ import {
   orders,
   paymentMethods,
   paymentProofs,
+  rafflePrizes,
   raffles,
   tickets,
   users,
@@ -333,6 +334,17 @@ const raffleSchema = z.object({
   drawAt: z.string().min(1, "Elige la fecha del sorteo"),
   status: z.enum(["draft", "active", "closed", "drawn"]).default("active"),
   imageUrl: z.string().optional(),
+  prizes: z
+    .array(
+      z.object({
+        title: z.string().trim().min(2).max(200),
+        description: z.string().trim().max(500).optional(),
+        imageUrl: z.string().trim().optional(),
+      }),
+    )
+    .min(1, "Agrega al menos un premio.")
+    .max(50)
+    .optional(),
   donationsEnabled: z.boolean().default(false),
 });
 
@@ -353,6 +365,16 @@ export async function createRaffle(raw: z.infer<typeof raffleSchema>) {
   const db = await getDb();
   const slug = slugify(parsed.data.slug || parsed.data.title) || nanoid(8);
   const raffleId = nanoid();
+  const prizeRows = parsed.data.prizes?.length
+    ? parsed.data.prizes
+    : [
+        {
+          title: parsed.data.prize,
+          description: undefined,
+          imageUrl: parsed.data.imageUrl,
+        },
+      ];
+  const primaryPrize = prizeRows[0]!;
 
   if (user.role !== "super_admin" && isDemoRaffleSlug(slug)) {
     return {
@@ -381,17 +403,28 @@ export async function createRaffle(raw: z.infer<typeof raffleSchema>) {
     title: parsed.data.title,
     slug,
     description: parsed.data.description || null,
-    prize: parsed.data.prize,
-    imageUrl: parsed.data.imageUrl || null,
+    prize: primaryPrize.title,
+    imageUrl: primaryPrize.imageUrl || null,
     pricePerTicket: parsed.data.pricePerTicket.toFixed(2),
     currency: parsed.data.currency,
     totalTickets: parsed.data.totalTickets,
     reservationMinutes: parsed.data.reservationMinutes,
-    winnerCount: parsed.data.winnerCount,
+    winnerCount: prizeRows.length,
     drawAt,
     status: parsed.data.status === "drawn" ? "active" : parsed.data.status,
     donationsEnabled: parsed.data.donationsEnabled,
   });
+
+  await db.insert(rafflePrizes).values(
+    prizeRows.map((prize, index) => ({
+      id: nanoid(),
+      raffleId,
+      title: prize.title,
+      description: prize.description || null,
+      imageUrl: prize.imageUrl || null,
+      position: index + 1,
+    })),
+  );
 
   const rows = Array.from({ length: parsed.data.totalTickets }, (_, i) => ({
     id: nanoid(),
@@ -452,6 +485,9 @@ export async function updateRaffle(
     return { ok: false as const, error: "Fecha del sorteo inválida." };
   }
 
+  const nextPrizes = raw.prizes?.length ? raw.prizes : undefined;
+  const primaryPrize = nextPrizes?.[0];
+
   await db
     .update(raffles)
     .set({
@@ -459,9 +495,13 @@ export async function updateRaffle(
       slug: nextSlug,
       description:
         raw.description !== undefined ? raw.description || null : current.description,
-      prize: raw.prize ?? current.prize,
+      prize: primaryPrize?.title ?? raw.prize ?? current.prize,
       imageUrl:
-        raw.imageUrl !== undefined ? raw.imageUrl || null : current.imageUrl,
+        primaryPrize !== undefined
+          ? primaryPrize.imageUrl || null
+          : raw.imageUrl !== undefined
+            ? raw.imageUrl || null
+            : current.imageUrl,
       pricePerTicket:
         raw.pricePerTicket !== undefined
           ? Number(raw.pricePerTicket).toFixed(2)
@@ -469,7 +509,7 @@ export async function updateRaffle(
       currency: raw.currency ?? current.currency,
       reservationMinutes:
         raw.reservationMinutes ?? current.reservationMinutes,
-      winnerCount: raw.winnerCount ?? current.winnerCount,
+      winnerCount: nextPrizes?.length ?? raw.winnerCount ?? current.winnerCount,
       drawAt: nextDrawAt,
       status: (raw.status as typeof current.status) ?? current.status,
       donationsEnabled:
@@ -479,6 +519,20 @@ export async function updateRaffle(
       updatedAt: new Date(),
     })
     .where(eq(raffles.id, id));
+
+  if (nextPrizes) {
+    await db.delete(rafflePrizes).where(eq(rafflePrizes.raffleId, id));
+    await db.insert(rafflePrizes).values(
+      nextPrizes.map((prize, index) => ({
+        id: nanoid(),
+        raffleId: id,
+        title: prize.title,
+        description: prize.description || null,
+        imageUrl: prize.imageUrl || null,
+        position: index + 1,
+      })),
+    );
+  }
 
   revalidatePath("/admin/rifas");
   revalidatePath(`/r/${nextSlug}`);
@@ -769,6 +823,30 @@ export async function getRaffleForAdmin(id: string) {
   return raffle ?? null;
 }
 
+export async function getRafflePrizesForAdmin(raffleId: string) {
+  const user = await requireAdmin();
+  await ensureSchema();
+  const db = await getDb();
+
+  const [raffle] = await db
+    .select({ id: raffles.id })
+    .from(raffles)
+    .where(
+      and(
+        eq(raffles.id, raffleId),
+        eq(raffles.organizationId, user.organizationId),
+      ),
+    )
+    .limit(1);
+  if (!raffle) return [];
+
+  return db
+    .select()
+    .from(rafflePrizes)
+    .where(eq(rafflePrizes.raffleId, raffleId))
+    .orderBy(asc(rafflePrizes.position));
+}
+
 export async function listRaffles() {
   const user = await requireAdmin();
   await ensureSchema();
@@ -829,6 +907,14 @@ export async function createFreshDemoRaffle() {
     )
     .limit(1);
 
+  const currentPrizes = currentDemo
+    ? await db
+        .select()
+        .from(rafflePrizes)
+        .where(eq(rafflePrizes.raffleId, currentDemo.id))
+        .orderBy(asc(rafflePrizes.position))
+    : [];
+
   if (currentDemo) {
     const archiveSlug = `demo-archivo-${new Date()
       .toISOString()
@@ -874,6 +960,27 @@ export async function createFreshDemoRaffle() {
     status: "active",
     donationsEnabled: currentDemo?.donationsEnabled ?? false,
   });
+
+  const demoPrizes =
+    currentPrizes.length > 0
+      ? currentPrizes
+      : [
+          {
+            title: prize,
+            description: null,
+            imageUrl: currentDemo?.imageUrl ?? null,
+          },
+        ];
+  await db.insert(rafflePrizes).values(
+    demoPrizes.map((item, index) => ({
+      id: nanoid(),
+      raffleId,
+      title: item.title,
+      description: item.description,
+      imageUrl: item.imageUrl,
+      position: index + 1,
+    })),
+  );
 
   const ticketRows = Array.from({ length: totalTickets }, (_, i) => ({
     id: nanoid(),
@@ -1030,8 +1137,26 @@ export async function getDrawByRaffleSlug(slug: string) {
   if (!draw) return { raffle, draw: null, winners: [] };
 
   const winners = await db
-    .select()
+    .select({
+      id: drawWinners.id,
+      drawId: drawWinners.drawId,
+      ticketId: drawWinners.ticketId,
+      ticketNumber: drawWinners.ticketNumber,
+      prizePosition: drawWinners.prizePosition,
+      participantName: drawWinners.participantName,
+      participantPhone: drawWinners.participantPhone,
+      prizeTitle: rafflePrizes.title,
+      prizeDescription: rafflePrizes.description,
+      prizeImageUrl: rafflePrizes.imageUrl,
+    })
     .from(drawWinners)
+    .leftJoin(
+      rafflePrizes,
+      and(
+        eq(rafflePrizes.raffleId, raffle.id),
+        eq(rafflePrizes.position, drawWinners.prizePosition),
+      ),
+    )
     .where(eq(drawWinners.drawId, draw.id))
     .orderBy(asc(drawWinners.prizePosition));
 
