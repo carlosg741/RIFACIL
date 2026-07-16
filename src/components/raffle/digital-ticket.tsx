@@ -5,6 +5,7 @@ import Link from "next/link";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import QRCode from "qrcode";
+import { toPng } from "html-to-image";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { buttonVariants } from "@/components/ui/button";
@@ -53,6 +54,7 @@ export function DigitalTicket({
   const ticketRef = useRef<HTMLDivElement>(null);
   const [qr, setQr] = useState("");
   const [origin, setOrigin] = useState("");
+  const [downloading, setDownloading] = useState(false);
   const digits = padDigitsForTotal(totalTickets);
   const drawDate = drawAt ? new Date(drawAt) : null;
   const hasValidDraw =
@@ -89,6 +91,27 @@ export function DigitalTicket({
 
   function printTicket() {
     window.print();
+  }
+
+  async function downloadTicket() {
+    const node = ticketRef.current;
+    if (!node) return;
+    setDownloading(true);
+    try {
+      const dataUrl = await toPng(node, {
+        pixelRatio: 2,
+        cacheBust: true,
+      });
+      const link = document.createElement("a");
+      link.download = `ticket-rifacil-${orderId.slice(0, 10)}.png`;
+      link.href = dataUrl;
+      link.click();
+      toast.success("Ticket descargado como imagen");
+    } catch {
+      toast.error("No se pudo descargar el ticket");
+    } finally {
+      setDownloading(false);
+    }
   }
 
   function sendWhatsApp() {
@@ -190,8 +213,11 @@ export function DigitalTicket({
       </div>
 
       <div className="flex flex-wrap gap-2 print:hidden">
-        <Button type="button" onClick={printTicket}>
-          Imprimir / PDF
+        <Button type="button" onClick={downloadTicket} disabled={downloading}>
+          {downloading ? "Descargando…" : "Descargar ticket"}
+        </Button>
+        <Button type="button" variant="outline" onClick={printTicket}>
+          Imprimir
         </Button>
         <Button type="button" variant="outline" onClick={copyLink}>
           Copiar link del ticket
