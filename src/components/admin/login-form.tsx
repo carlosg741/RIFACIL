@@ -5,10 +5,11 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { toast } from "sonner";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { ButtonLink } from "@/components/button-link";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { contactWhatsAppUrl } from "@/lib/contact";
+import { cn } from "@/lib/utils";
 
 export function LoginForm() {
   const router = useRouter();
@@ -64,13 +65,14 @@ export function LoginForm() {
       <Button type="submit" className="w-full" disabled={pending}>
         {pending ? "Entrando…" : "Entrar"}
       </Button>
-      <ButtonLink
-        href="/#contacto"
-        variant="outline"
-        className="w-full"
+      <a
+        href={contactWhatsAppUrl()}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={cn(buttonVariants({ variant: "outline" }), "w-full")}
       >
         Solicitar panel
-      </ButtonLink>
+      </a>
       <p className="text-center text-sm text-muted-foreground">
         <Link href="/" className="underline">
           Volver al inicio
