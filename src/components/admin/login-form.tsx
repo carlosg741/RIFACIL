@@ -6,13 +6,14 @@ import { signIn } from "next-auth/react";
 import { toast } from "sonner";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { ButtonLink } from "@/components/button-link";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 export function LoginForm() {
   const router = useRouter();
   const search = useSearchParams();
-  const [email, setEmail] = useState("admin@rifacil.com");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [pending, startTransition] = useTransition();
 
@@ -40,8 +41,11 @@ export function LoginForm() {
         <Input
           id="email"
           type="email"
+          name="email"
+          autoComplete="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
+          placeholder="tu@correo.com"
           required
         />
       </div>
@@ -50,6 +54,8 @@ export function LoginForm() {
         <Input
           id="password"
           type="password"
+          name="password"
+          autoComplete="current-password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
@@ -58,6 +64,13 @@ export function LoginForm() {
       <Button type="submit" className="w-full" disabled={pending}>
         {pending ? "Entrando…" : "Entrar"}
       </Button>
+      <ButtonLink
+        href="/#contacto"
+        variant="outline"
+        className="w-full"
+      >
+        Solicitar panel
+      </ButtonLink>
       <p className="text-center text-sm text-muted-foreground">
         <Link href="/" className="underline">
           Volver al inicio

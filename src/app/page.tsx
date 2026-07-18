@@ -73,8 +73,8 @@ export default async function HomePage() {
               Talonario digital para organizar rifas de principio a fin
             </h1>
             <p className="animate-fade-up mt-4 max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg [animation-delay:140ms]">
-              Comparte link y QR, aparta números, cobra con Yape/Plin o
-              transferencia, valida comprobantes y sortea con transparencia.
+              Comparte link y QR, aparta números, cobra con tus propios métodos
+              de pago, valida comprobantes y sortea con transparencia.
             </p>
             <div className="animate-fade-up mt-8 flex flex-wrap gap-3 [animation-delay:200ms]">
               <ButtonLink
