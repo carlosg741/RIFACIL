@@ -11,6 +11,7 @@ const nextConfig: NextConfig = {
     localPatterns: [
       { pathname: "/rifacil-logo.png" },
       { pathname: "/rifacil-icon.png" },
+      { pathname: "/rifacil-og.png" },
       { pathname: "/apple-touch-icon.png" },
       { pathname: "/uploads/**" },
     ],

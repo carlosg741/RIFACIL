@@ -47,9 +47,9 @@ export const metadata: Metadata = {
       "Crea rifas, gestiona boletos, recibe comprobantes de pago y sortea ganadores con transparencia.",
     images: [
       {
-        url: "/rifacil-logo.png",
-        width: 731,
-        height: 346,
+        url: "/rifacil-og.png",
+        width: 1200,
+        height: 630,
         alt: "Rifacil",
       },
     ],
@@ -59,7 +59,7 @@ export const metadata: Metadata = {
     title: "Rifacil — Talonario digital para rifas",
     description:
       "Crea rifas, gestiona boletos, recibe comprobantes de pago y sortea ganadores con transparencia.",
-    images: ["/rifacil-logo.png"],
+    images: ["/rifacil-og.png"],
   },
 };
 
