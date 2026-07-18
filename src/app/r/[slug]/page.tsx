@@ -5,6 +5,7 @@ import { es } from "date-fns/locale";
 import { TicketGrid } from "@/components/raffle/ticket-grid";
 import { PrizeCarousel } from "@/components/raffle/prize-carousel";
 import { BrandLogo } from "@/components/brand-logo";
+import { ButtonLink } from "@/components/button-link";
 import { Badge } from "@/components/ui/badge";
 import { getRaffleBySlug } from "@/lib/actions/public";
 import { formatMoney, raffleStatusLabel } from "@/lib/format";
@@ -33,8 +34,13 @@ export default async function RafflePage({
 
   return (
     <div className="min-h-full hero-mesh">
-      <header className="mx-auto flex max-w-5xl items-center justify-between px-4 py-5">
-        <BrandLogo href="/" size="sm" />
+      <header className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-5">
+        <div className="flex items-center gap-3">
+          <BrandLogo href="/" size="sm" />
+          <ButtonLink href="/" size="sm" variant="outline">
+            Inicio
+          </ButtonLink>
+        </div>
         <Badge variant="secondary">{raffleStatusLabel[raffle.status]}</Badge>
       </header>
 
@@ -43,6 +49,34 @@ export default async function RafflePage({
           <h1 className="font-[family-name:var(--font-display)] text-4xl font-bold text-foreground md:text-5xl">
             {raffle.title}
           </h1>
+
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-3 rounded-2xl border border-primary/30 bg-secondary/40 px-4 py-3">
+            {raffle.drawAt ? (
+              <div>
+                <p className="text-xs uppercase tracking-wider text-muted-foreground">
+                  Fecha del sorteo
+                </p>
+                <p className="font-binance-num font-semibold text-primary">
+                  {format(new Date(raffle.drawAt), "d MMMM yyyy · HH:mm", {
+                    locale: es,
+                  })}
+                </p>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Fecha del sorteo por anunciar
+              </p>
+            )}
+            <ButtonLink
+              href={`/r/${raffle.slug}/sorteo`}
+              size="sm"
+              variant={raffle.status === "drawn" ? "default" : "secondary"}
+            >
+              {raffle.status === "drawn"
+                ? "Ver ganadores"
+                : "Ver resultado del sorteo"}
+            </ButtonLink>
+          </div>
           {raffle.imageUrl ? (
             <div className="flex max-h-[50vh] min-h-48 items-center justify-center overflow-hidden rounded-2xl border border-primary/20 bg-black/10 p-3">
               {/* eslint-disable-next-line @next/next/no-img-element */}
