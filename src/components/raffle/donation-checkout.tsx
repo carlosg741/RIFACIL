@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -14,17 +14,21 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { createDonation } from "@/lib/actions/public";
+import { currencyLabel } from "@/lib/currencies";
 import { formatMoney } from "@/lib/format";
 import type { PaymentMethod, Raffle } from "@/db/schema";
+import type { CurrencyView } from "@/components/raffle/ticket-grid";
 import { PaymentMethodDetails } from "@/components/raffle/payment-method-details";
 
 export function DonationCheckout({
   raffle,
   paymentMethods,
+  currencies,
   onBack,
 }: {
   raffle: Raffle;
   paymentMethods: PaymentMethod[];
+  currencies: CurrencyView[];
   onBack: () => void;
 }) {
   const router = useRouter();
@@ -33,12 +37,33 @@ export function DonationCheckout({
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [amount, setAmount] = useState("");
+  const currencyList = currencies.length
+    ? currencies
+    : [{ code: raffle.currency, pricePerTicket: raffle.pricePerTicket }];
+  const [currencyCode, setCurrencyCode] = useState(currencyList[0]!.code);
+  const methodsForCurrency = useMemo(
+    () =>
+      paymentMethods.filter((m) => !m.currency || m.currency === currencyCode),
+    [paymentMethods, currencyCode],
+  );
   const [paymentMethodId, setPaymentMethodId] = useState(
-    paymentMethods[0]?.id ?? "",
+    methodsForCurrency[0]?.id ?? "",
   );
   const [pending, startTransition] = useTransition();
 
-  const method = paymentMethods.find((m) => m.id === paymentMethodId);
+  function changeCurrency(code: string) {
+    setCurrencyCode(code);
+    const nextMethods = paymentMethods.filter(
+      (m) => !m.currency || m.currency === code,
+    );
+    setPaymentMethodId((current) =>
+      nextMethods.some((m) => m.id === current)
+        ? current
+        : (nextMethods[0]?.id ?? ""),
+    );
+  }
+
+  const method = methodsForCurrency.find((m) => m.id === paymentMethodId);
   const amountNum = Number(amount);
 
   function submit() {
@@ -64,6 +89,7 @@ export function DonationCheckout({
         phone,
         email,
         paymentMethodId,
+        currency: currencyCode,
       });
       if (!created.ok) {
         toast.error(created.error);
@@ -129,8 +155,32 @@ export function DonationCheckout({
             placeholder="tu@email.com"
           />
         </div>
+        {currencyList.length > 1 && (
+          <div className="space-y-2">
+            <Label>Moneda de la donación</Label>
+            <Select
+              value={currencyCode}
+              items={currencyList.map((c) => ({
+                value: c.code,
+                label: currencyLabel(c.code),
+              }))}
+              onValueChange={(v) => changeCurrency(v ?? currencyCode)}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Elige tu moneda" />
+              </SelectTrigger>
+              <SelectContent>
+                {currencyList.map((c) => (
+                  <SelectItem key={c.code} value={c.code}>
+                    {currencyLabel(c.code)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
         <div className="space-y-2">
-          <Label htmlFor="donor-amount">Monto a donar ({raffle.currency})</Label>
+          <Label htmlFor="donor-amount">Monto a donar ({currencyCode})</Label>
           <Input
             id="donor-amount"
             type="number"
@@ -145,7 +195,7 @@ export function DonationCheckout({
           <Label>Método de pago</Label>
             <Select
               value={paymentMethodId}
-              items={paymentMethods.map((m) => ({
+              items={methodsForCurrency.map((m) => ({
                 value: m.id,
                 label: m.name,
               }))}
@@ -155,13 +205,18 @@ export function DonationCheckout({
               <SelectValue placeholder="Elige cómo pagar" />
             </SelectTrigger>
             <SelectContent>
-              {paymentMethods.map((m) => (
+              {methodsForCurrency.map((m) => (
                 <SelectItem key={m.id} value={m.id}>
                   {m.name}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
+          {methodsForCurrency.length === 0 && (
+            <p className="text-xs text-amber-400">
+              No hay métodos de pago para esta moneda. Elige otra moneda.
+            </p>
+          )}
         </div>
       </div>
 
@@ -170,7 +225,7 @@ export function DonationCheckout({
           method={method}
           amountLine={
             amountNum > 0
-              ? `Monto a donar: ${formatMoney(amountNum, raffle.currency)}`
+              ? `Monto a donar: ${formatMoney(amountNum, currencyCode)}`
               : undefined
           }
         />

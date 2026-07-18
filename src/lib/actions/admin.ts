@@ -15,6 +15,7 @@ import {
   orders,
   paymentMethods,
   paymentProofs,
+  raffleCurrencies,
   rafflePrizes,
   raffles,
   tickets,
@@ -152,6 +153,7 @@ export async function getAdminDashboard() {
       order: orders,
       raffleTitle: raffles.title,
       raffleSlug: raffles.slug,
+      raffleCurrency: raffles.currency,
     })
     .from(orders)
     .innerJoin(raffles, eq(orders.raffleId, raffles.id))
@@ -193,6 +195,7 @@ export async function listAdminOrders(status?: string) {
       order: orders,
       raffleTitle: raffles.title,
       raffleSlug: raffles.slug,
+      raffleCurrency: raffles.currency,
       proofUrl: paymentProofs.fileUrl,
       methodName: paymentMethods.name,
     })
@@ -321,13 +324,37 @@ export async function releaseExpiredNow() {
   return { ok: true as const, count };
 }
 
+const currencyEntrySchema = z.object({
+  code: z
+    .string()
+    .trim()
+    .min(2)
+    .max(6)
+    .transform((v) => v.toUpperCase()),
+  pricePerTicket: z.coerce.number().positive("El precio debe ser mayor a 0."),
+});
+
+function dedupeCurrencies<T extends { code: string }>(rows: T[]): T[] {
+  const seen = new Set<string>();
+  return rows.filter((row) => {
+    if (seen.has(row.code)) return false;
+    seen.add(row.code);
+    return true;
+  });
+}
+
 const raffleSchema = z.object({
   title: z.string().min(3).max(120),
   slug: z.string().min(2).max(60).optional(),
   description: z.string().max(2000).optional(),
   prize: z.string().min(2).max(200),
   pricePerTicket: z.coerce.number().positive(),
-  currency: z.string().min(3).max(3).default("PEN"),
+  currency: z.string().min(2).max(6).default("PEN"),
+  currencies: z
+    .array(currencyEntrySchema)
+    .min(1, "Agrega al menos una moneda.")
+    .max(20)
+    .optional(),
   totalTickets: z.coerce.number().int().min(10).max(10000),
   reservationMinutes: z.coerce.number().int().min(5).max(1440).default(30),
   winnerCount: z.coerce.number().int().min(1).max(50).default(1),
@@ -376,6 +403,18 @@ export async function createRaffle(raw: z.infer<typeof raffleSchema>) {
       ];
   const primaryPrize = prizeRows[0]!;
 
+  const currencyRows = dedupeCurrencies(
+    parsed.data.currencies?.length
+      ? parsed.data.currencies
+      : [
+          {
+            code: parsed.data.currency.toUpperCase(),
+            pricePerTicket: parsed.data.pricePerTicket,
+          },
+        ],
+  );
+  const primaryCurrency = currencyRows[0]!;
+
   if (user.role !== "super_admin" && isDemoRaffleSlug(slug)) {
     return {
       ok: false as const,
@@ -406,8 +445,8 @@ export async function createRaffle(raw: z.infer<typeof raffleSchema>) {
     prize: primaryPrize.title,
     /** Imagen de identidad (persona, marca o institución), independiente de los premios */
     imageUrl: parsed.data.imageUrl || null,
-    pricePerTicket: parsed.data.pricePerTicket.toFixed(2),
-    currency: parsed.data.currency,
+    pricePerTicket: primaryCurrency.pricePerTicket.toFixed(2),
+    currency: primaryCurrency.code,
     totalTickets: parsed.data.totalTickets,
     reservationMinutes: parsed.data.reservationMinutes,
     winnerCount: prizeRows.length,
@@ -423,6 +462,16 @@ export async function createRaffle(raw: z.infer<typeof raffleSchema>) {
       title: prize.title,
       description: prize.description || null,
       imageUrl: prize.imageUrl || null,
+      position: index + 1,
+    })),
+  );
+
+  await db.insert(raffleCurrencies).values(
+    currencyRows.map((item, index) => ({
+      id: nanoid(),
+      raffleId,
+      code: item.code,
+      pricePerTicket: item.pricePerTicket.toFixed(2),
       position: index + 1,
     })),
   );
@@ -489,6 +538,22 @@ export async function updateRaffle(
   const nextPrizes = raw.prizes?.length ? raw.prizes : undefined;
   const primaryPrize = nextPrizes?.[0];
 
+  const nextCurrencies = raw.currencies?.length
+    ? dedupeCurrencies(
+        raw.currencies.map((item) => ({
+          code: item.code.toUpperCase(),
+          pricePerTicket: Number(item.pricePerTicket),
+        })),
+      )
+    : undefined;
+  if (nextCurrencies?.some((c) => !c.pricePerTicket || c.pricePerTicket <= 0)) {
+    return {
+      ok: false as const,
+      error: "Cada moneda debe tener un precio mayor a 0.",
+    };
+  }
+  const primaryCurrency = nextCurrencies?.[0];
+
   await db
     .update(raffles)
     .set({
@@ -499,11 +564,12 @@ export async function updateRaffle(
       prize: primaryPrize?.title ?? raw.prize ?? current.prize,
       imageUrl:
         raw.imageUrl !== undefined ? raw.imageUrl || null : current.imageUrl,
-      pricePerTicket:
-        raw.pricePerTicket !== undefined
+      pricePerTicket: primaryCurrency
+        ? primaryCurrency.pricePerTicket.toFixed(2)
+        : raw.pricePerTicket !== undefined
           ? Number(raw.pricePerTicket).toFixed(2)
           : current.pricePerTicket,
-      currency: raw.currency ?? current.currency,
+      currency: primaryCurrency?.code ?? raw.currency ?? current.currency,
       reservationMinutes:
         raw.reservationMinutes ?? current.reservationMinutes,
       winnerCount: nextPrizes?.length ?? raw.winnerCount ?? current.winnerCount,
@@ -531,6 +597,19 @@ export async function updateRaffle(
     );
   }
 
+  if (nextCurrencies) {
+    await db.delete(raffleCurrencies).where(eq(raffleCurrencies.raffleId, id));
+    await db.insert(raffleCurrencies).values(
+      nextCurrencies.map((item, index) => ({
+        id: nanoid(),
+        raffleId: id,
+        code: item.code,
+        pricePerTicket: item.pricePerTicket.toFixed(2),
+        position: index + 1,
+      })),
+    );
+  }
+
   revalidatePath("/admin/rifas");
   revalidatePath(`/r/${nextSlug}`);
   return { ok: true as const };
@@ -546,6 +625,7 @@ export async function listAdminDonations(status?: string) {
       donation: donations,
       raffleTitle: raffles.title,
       raffleSlug: raffles.slug,
+      raffleCurrency: raffles.currency,
       methodName: paymentMethods.name,
     })
     .from(donations)
@@ -677,6 +757,8 @@ const methodSchema = z.object({
   accountInfo: z.string().max(300).optional(),
   accountHolder: z.string().max(120).optional(),
   qrImageUrl: z.string().optional(),
+  /** Moneda que acepta el método; "" o undefined = todas las monedas */
+  currency: z.string().trim().max(6).optional(),
   active: z.boolean().default(true),
   sortOrder: z.coerce.number().int().default(0),
 });
@@ -717,6 +799,7 @@ export async function createPaymentMethod(raw: z.infer<typeof methodSchema>) {
     accountInfo: parsed.data.accountInfo || null,
     accountHolder: parsed.data.accountHolder || null,
     qrImageUrl: parsed.data.qrImageUrl || null,
+    currency: parsed.data.currency?.toUpperCase() || null,
     active: parsed.data.active,
     sortOrder: parsed.data.sortOrder,
   });
@@ -780,6 +863,10 @@ export async function updatePaymentMethod(
         raw.qrImageUrl !== undefined
           ? raw.qrImageUrl || null
           : current.qrImageUrl,
+      currency:
+        raw.currency !== undefined
+          ? raw.currency?.toUpperCase() || null
+          : current.currency,
       active: raw.active ?? current.active,
       sortOrder: raw.sortOrder ?? current.sortOrder,
     })
@@ -842,6 +929,30 @@ export async function getRafflePrizesForAdmin(raffleId: string) {
     .from(rafflePrizes)
     .where(eq(rafflePrizes.raffleId, raffleId))
     .orderBy(asc(rafflePrizes.position));
+}
+
+export async function getRaffleCurrenciesForAdmin(raffleId: string) {
+  const user = await requireAdmin();
+  await ensureSchema();
+  const db = await getDb();
+
+  const [raffle] = await db
+    .select({ id: raffles.id })
+    .from(raffles)
+    .where(
+      and(
+        eq(raffles.id, raffleId),
+        eq(raffles.organizationId, user.organizationId),
+      ),
+    )
+    .limit(1);
+  if (!raffle) return [];
+
+  return db
+    .select()
+    .from(raffleCurrencies)
+    .where(eq(raffleCurrencies.raffleId, raffleId))
+    .orderBy(asc(raffleCurrencies.position));
 }
 
 export async function listRaffles() {
@@ -912,6 +1023,14 @@ export async function createFreshDemoRaffle() {
         .orderBy(asc(rafflePrizes.position))
     : [];
 
+  const currentCurrencies = currentDemo
+    ? await db
+        .select()
+        .from(raffleCurrencies)
+        .where(eq(raffleCurrencies.raffleId, currentDemo.id))
+        .orderBy(asc(raffleCurrencies.position))
+    : [];
+
   if (currentDemo) {
     const archiveSlug = `demo-archivo-${new Date()
       .toISOString()
@@ -979,6 +1098,20 @@ export async function createFreshDemoRaffle() {
     })),
   );
 
+  const demoCurrencies =
+    currentCurrencies.length > 0
+      ? currentCurrencies
+      : [{ code: currency, pricePerTicket }];
+  await db.insert(raffleCurrencies).values(
+    demoCurrencies.map((item, index) => ({
+      id: nanoid(),
+      raffleId,
+      code: item.code,
+      pricePerTicket: item.pricePerTicket,
+      position: index + 1,
+    })),
+  );
+
   const ticketRows = Array.from({ length: totalTickets }, (_, i) => ({
     id: nanoid(),
     raffleId,
@@ -1007,6 +1140,7 @@ export async function createFreshDemoRaffle() {
           accountInfo: m.accountInfo,
           accountHolder: m.accountHolder,
           qrImageUrl: m.qrImageUrl,
+          currency: m.currency,
           active: m.active,
           sortOrder: m.sortOrder ?? i + 1,
         })),

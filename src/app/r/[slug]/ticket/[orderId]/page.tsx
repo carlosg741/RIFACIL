@@ -45,7 +45,7 @@ export default async function TicketPage({
           numbers={tickets.map((t) => t.number)}
           totalTickets={raffle.totalTickets}
           totalAmount={order.totalAmount}
-          currency={raffle.currency}
+          currency={order.currency || raffle.currency}
           status={order.status}
           drawAt={raffle.drawAt}
           raffleStatus={raffle.status}

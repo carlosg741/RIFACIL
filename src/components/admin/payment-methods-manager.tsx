@@ -19,7 +19,18 @@ import {
   deletePaymentMethod,
   updatePaymentMethod,
 } from "@/lib/actions/admin";
+import { CURRENCY_OPTIONS, currencyLabel } from "@/lib/currencies";
 import type { PaymentMethod } from "@/db/schema";
+
+const ALL_CURRENCIES = "__all__";
+
+const CURRENCY_SELECT_ITEMS = [
+  { value: ALL_CURRENCIES, label: "Todas las monedas" },
+  ...CURRENCY_OPTIONS.map((option) => ({
+    value: option.code,
+    label: option.label,
+  })),
+];
 
 type MethodRow = {
   method: PaymentMethod;
@@ -51,6 +62,7 @@ export function PaymentMethodsManager({
   const [accountHolder, setAccountHolder] = useState("");
   const [instructions, setInstructions] = useState("");
   const [qrImageUrl, setQrImageUrl] = useState("");
+  const [currency, setCurrency] = useState(ALL_CURRENCIES);
 
   async function uploadQr(file: File | undefined) {
     if (!file) return;
@@ -87,6 +99,7 @@ export function PaymentMethodsManager({
     setAccountHolder("");
     setInstructions("");
     setQrImageUrl("");
+    setCurrency(ALL_CURRENCIES);
   }
 
   function create() {
@@ -102,6 +115,7 @@ export function PaymentMethodsManager({
         accountInfo,
         accountHolder,
         qrImageUrl: qrImageUrl || undefined,
+        currency: currency === ALL_CURRENCIES ? undefined : currency,
         active: true,
         sortOrder: methods.length + 1,
       });
@@ -154,6 +168,10 @@ export function PaymentMethodsManager({
                       <span className="text-amber-300">Sin rifa asignada</span>
                     )}
                   </p>
+                  <p className="text-xs text-muted-foreground">
+                    Moneda:{" "}
+                    {m.currency ? currencyLabel(m.currency) : "Todas las monedas"}
+                  </p>
                   {m.accountHolder && (
                     <p className="text-sm">
                       <span className="text-muted-foreground">A nombre de:</span>{" "}
@@ -197,6 +215,31 @@ export function PaymentMethodsManager({
                     </SelectContent>
                   </Select>
                 )}
+                <Select
+                  value={m.currency || ALL_CURRENCIES}
+                  items={CURRENCY_SELECT_ITEMS}
+                  onValueChange={(v) =>
+                    start(async () => {
+                      if (!v) return;
+                      await updatePaymentMethod(m.id, {
+                        currency: v === ALL_CURRENCIES ? "" : v,
+                      });
+                      toast.success("Moneda del método actualizada");
+                      router.refresh();
+                    })
+                  }
+                >
+                  <SelectTrigger className="w-[200px]">
+                    <SelectValue placeholder="Moneda del método" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CURRENCY_SELECT_ITEMS.map((item) => (
+                      <SelectItem key={item.value} value={item.value}>
+                        {item.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <div className="flex gap-2">
                   <Button
                     size="sm"
@@ -266,8 +309,32 @@ export function PaymentMethodsManager({
           <Input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Yape, Plin, BCP, Interbank…"
+            placeholder="Yape, Plin, PayPal, Wise, Binance…"
           />
+        </div>
+
+        <div className="space-y-2">
+          <Label>Moneda que acepta</Label>
+          <Select
+            value={currency}
+            items={CURRENCY_SELECT_ITEMS}
+            onValueChange={(v) => setCurrency(v ?? ALL_CURRENCIES)}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Todas las monedas" />
+            </SelectTrigger>
+            <SelectContent>
+              {CURRENCY_SELECT_ITEMS.map((item) => (
+                <SelectItem key={item.value} value={item.value}>
+                  {item.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">
+            Al elegir una moneda, este método solo se mostrará a quienes paguen
+            en esa moneda.
+          </p>
         </div>
 
         <div className="space-y-2">

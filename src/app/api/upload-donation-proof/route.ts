@@ -74,6 +74,7 @@ export async function POST(request: Request) {
       donorName: donation.donorName,
       donorPhone: donation.donorPhone,
       amount: donation.amount,
+      currency: donation.currency,
     });
 
     return NextResponse.json({ ok: true });

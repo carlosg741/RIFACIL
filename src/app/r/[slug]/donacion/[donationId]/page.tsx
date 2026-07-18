@@ -41,7 +41,8 @@ export default async function DonationStatusPage({
             {donation.donorPhone}
           </p>
           <p className="font-binance-num text-lg font-semibold text-primary">
-            Monto: {formatMoney(donation.amount, raffle.currency)}
+            Monto:{" "}
+            {formatMoney(donation.amount, donation.currency || raffle.currency)}
           </p>
           {paymentMethod && (
             <p className="text-sm text-muted-foreground">

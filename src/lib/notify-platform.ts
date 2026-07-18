@@ -66,6 +66,7 @@ export async function notifyPlatformOrderProof(order: {
   participantName: string;
   participantPhone: string;
   totalAmount: string;
+  currency?: string | null;
 }) {
   try {
     const meta = await getPlatformRecipientsForRaffle(order.raffleId);
@@ -83,7 +84,7 @@ export async function notifyPlatformOrderProof(order: {
       .join(", ");
 
     const adminUrl = `${getAppBaseUrl()}/admin/ordenes?status=under_review`;
-    const amount = formatMoney(order.totalAmount, meta.currency);
+    const amount = formatMoney(order.totalAmount, order.currency || meta.currency);
 
     const subject = `[Rifacil] Comprobante por revisar — ${meta.raffleTitle}`;
     const text = [
@@ -131,13 +132,17 @@ export async function notifyPlatformDonationProof(donation: {
   donorName: string;
   donorPhone: string;
   amount: string;
+  currency?: string | null;
 }) {
   try {
     const meta = await getPlatformRecipientsForRaffle(donation.raffleId);
     if (!meta) return;
 
     const adminUrl = `${getAppBaseUrl()}/admin/donaciones?status=under_review`;
-    const amount = formatMoney(donation.amount, meta.currency);
+    const amount = formatMoney(
+      donation.amount,
+      donation.currency || meta.currency,
+    );
 
     const subject = `[Rifacil] Donación por revisar — ${meta.raffleTitle}`;
     const text = [

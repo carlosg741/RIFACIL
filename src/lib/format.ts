@@ -4,11 +4,20 @@ export function formatMoney(
   locale = "es-PE",
 ) {
   const value = typeof amount === "string" ? Number(amount) : amount;
-  return new Intl.NumberFormat(locale, {
-    style: "currency",
-    currency,
-    minimumFractionDigits: 2,
-  }).format(value);
+  try {
+    return new Intl.NumberFormat(locale, {
+      style: "currency",
+      currency,
+      minimumFractionDigits: 2,
+    }).format(value);
+  } catch {
+    // Códigos no ISO (USDT, USDC…): número + código
+    const num = new Intl.NumberFormat(locale, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(value);
+    return `${num} ${currency}`;
+  }
 }
 
 export function formatTicketNumber(n: number, digits = 2) {

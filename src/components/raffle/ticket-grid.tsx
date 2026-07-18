@@ -21,6 +21,7 @@ import {
   padDigitsForTotal,
 } from "@/lib/format";
 import type { PaymentMethod, Raffle } from "@/db/schema";
+import { currencyLabel } from "@/lib/currencies";
 import { DonationCheckout } from "@/components/raffle/donation-checkout";
 import { PaymentMethodDetails } from "@/components/raffle/payment-method-details";
 
@@ -30,14 +31,21 @@ type TicketView = {
   status: "available" | "reserved" | "paid" | "cancelled";
 };
 
+export type CurrencyView = {
+  code: string;
+  pricePerTicket: string;
+};
+
 export function TicketGrid({
   raffle,
   tickets,
   paymentMethods,
+  currencies,
 }: {
   raffle: Raffle;
   tickets: TicketView[];
   paymentMethods: PaymentMethod[];
+  currencies: CurrencyView[];
 }) {
   const router = useRouter();
   const [selected, setSelected] = useState<number[]>([]);
@@ -45,11 +53,36 @@ export function TicketGrid({
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
+  const currencyList = currencies.length
+    ? currencies
+    : [{ code: raffle.currency, pricePerTicket: raffle.pricePerTicket }];
+  const [currencyCode, setCurrencyCode] = useState(currencyList[0]!.code);
+  const activeCurrency =
+    currencyList.find((c) => c.code === currencyCode) ?? currencyList[0]!;
+  const methodsForCurrency = useMemo(
+    () =>
+      paymentMethods.filter(
+        (m) => !m.currency || m.currency === activeCurrency.code,
+      ),
+    [paymentMethods, activeCurrency.code],
+  );
   const [paymentMethodId, setPaymentMethodId] = useState(
-    paymentMethods[0]?.id ?? "",
+    methodsForCurrency[0]?.id ?? "",
   );
   const [pending, startTransition] = useTransition();
   const digits = padDigitsForTotal(raffle.totalTickets);
+
+  function changeCurrency(code: string) {
+    setCurrencyCode(code);
+    const nextMethods = paymentMethods.filter(
+      (m) => !m.currency || m.currency === code,
+    );
+    setPaymentMethodId((current) =>
+      nextMethods.some((m) => m.id === current)
+        ? current
+        : (nextMethods[0]?.id ?? ""),
+    );
+  }
 
   const stats = useMemo(() => {
     const available = tickets.filter((t) => t.status === "available").length;
@@ -63,7 +96,7 @@ export function TicketGrid({
     [tickets],
   );
 
-  const total = selected.length * Number(raffle.pricePerTicket);
+  const total = selected.length * Number(activeCurrency.pricePerTicket);
 
   function toggle(n: number, status: TicketView["status"]) {
     if (status !== "available") return;
@@ -100,6 +133,7 @@ export function TicketGrid({
         phone,
         email,
         paymentMethodId,
+        currency: activeCurrency.code,
       });
       if (!res.ok) {
         toast.error(res.error);
@@ -115,13 +149,14 @@ export function TicketGrid({
       <DonationCheckout
         raffle={raffle}
         paymentMethods={paymentMethods}
+        currencies={currencyList}
         onBack={() => setStep("grid")}
       />
     );
   }
 
   if (step === "checkout") {
-    const method = paymentMethods.find((m) => m.id === paymentMethodId);
+    const method = methodsForCurrency.find((m) => m.id === paymentMethodId);
     return (
       <div className="mx-auto max-w-lg space-y-6 rounded-2xl border border-border bg-card p-6 shadow-sm">
         <div>
@@ -131,11 +166,39 @@ export function TicketGrid({
           <p className="mt-1 text-sm text-muted-foreground">
             {selected.length} número(s):{" "}
             {selected.map((n) => formatTicketNumber(n, digits)).join(", ")} ·{" "}
-            {formatMoney(total, raffle.currency)}
+            {formatMoney(total, activeCurrency.code)}
           </p>
         </div>
 
         <div className="space-y-4">
+          {currencyList.length > 1 && (
+            <div className="space-y-2">
+              <Label>Moneda de pago</Label>
+              <Select
+                value={activeCurrency.code}
+                items={currencyList.map((c) => ({
+                  value: c.code,
+                  label: `${currencyLabel(c.code)} · ${formatMoney(
+                    c.pricePerTicket,
+                    c.code,
+                  )} / número`,
+                }))}
+                onValueChange={(v) => changeCurrency(v ?? activeCurrency.code)}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Elige tu moneda" />
+                </SelectTrigger>
+                <SelectContent>
+                  {currencyList.map((c) => (
+                    <SelectItem key={c.code} value={c.code}>
+                      {currencyLabel(c.code)} ·{" "}
+                      {formatMoney(c.pricePerTicket, c.code)} / número
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           <div className="space-y-2">
             <Label htmlFor="name">Nombre completo</Label>
             <Input
@@ -168,7 +231,7 @@ export function TicketGrid({
             <Label>Método de pago</Label>
             <Select
               value={paymentMethodId}
-              items={paymentMethods.map((m) => ({
+              items={methodsForCurrency.map((m) => ({
                 value: m.id,
                 label: m.name,
               }))}
@@ -178,20 +241,25 @@ export function TicketGrid({
                 <SelectValue placeholder="Elige cómo pagar" />
               </SelectTrigger>
               <SelectContent>
-                {paymentMethods.map((m) => (
+                {methodsForCurrency.map((m) => (
                   <SelectItem key={m.id} value={m.id}>
                     {m.name}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            {methodsForCurrency.length === 0 && (
+              <p className="text-xs text-amber-400">
+                No hay métodos de pago para esta moneda. Elige otra moneda.
+              </p>
+            )}
           </div>
         </div>
 
         {method && (
           <PaymentMethodDetails
             method={method}
-            amountLine={`Monto a pagar: ${formatMoney(total, raffle.currency)}`}
+            amountLine={`Monto a pagar: ${formatMoney(total, activeCurrency.code)}`}
           />
         )}
 
@@ -214,6 +282,26 @@ export function TicketGrid({
 
   return (
     <div className="relative space-y-6 pb-28">
+      {currencyList.length > 1 && (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-sm text-muted-foreground">Pagar en:</span>
+          {currencyList.map((c) => (
+            <button
+              key={c.code}
+              type="button"
+              onClick={() => changeCurrency(c.code)}
+              className={`rounded-full border px-3 py-1.5 text-sm font-semibold transition ${
+                c.code === activeCurrency.code
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-border bg-card text-muted-foreground hover:border-primary/50"
+              }`}
+            >
+              {c.code} · {formatMoney(c.pricePerTicket, c.code)}
+            </button>
+          ))}
+        </div>
+      )}
+
       <div className="flex flex-wrap gap-4 text-sm">
         <span className="inline-flex items-center gap-2">
           <span className="h-3 w-3 rounded-sm border bg-white" /> Disponibles{" "}
@@ -283,7 +371,7 @@ export function TicketGrid({
               : `${selected.length} seleccionados`}
           </p>
           <p className="font-binance-num font-semibold text-primary">
-            {formatMoney(total, raffle.currency)}
+            {formatMoney(total, activeCurrency.code)}
           </p>
         </div>
         <Button

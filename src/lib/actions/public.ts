@@ -11,6 +11,7 @@ import {
   orders,
   paymentMethods,
   paymentProofs,
+  raffleCurrencies,
   rafflePrizes,
   raffles,
   tickets,
@@ -26,6 +27,7 @@ const reserveSchema = z.object({
   phone: z.string().trim().min(6).max(40),
   email: z.string().trim().email().optional().or(z.literal("")),
   paymentMethodId: z.string().min(1),
+  currency: z.string().trim().max(6).optional(),
 });
 
 export async function getRaffleBySlug(slug: string) {
@@ -68,7 +70,32 @@ export async function getRaffleBySlug(slug: string) {
     .where(eq(rafflePrizes.raffleId, raffle.id))
     .orderBy(asc(rafflePrizes.position));
 
-  return { raffle, prizes, tickets: ticketRows, paymentMethods: methods };
+  const currencyRows = await db
+    .select()
+    .from(raffleCurrencies)
+    .where(eq(raffleCurrencies.raffleId, raffle.id))
+    .orderBy(asc(raffleCurrencies.position));
+
+  const currencies = currencyRows.length
+    ? currencyRows
+    : [
+        {
+          id: `${raffle.id}-legacy-currency`,
+          raffleId: raffle.id,
+          code: raffle.currency,
+          pricePerTicket: raffle.pricePerTicket,
+          position: 1,
+          createdAt: raffle.createdAt,
+        },
+      ];
+
+  return {
+    raffle,
+    prizes,
+    currencies,
+    tickets: ticketRows,
+    paymentMethods: methods,
+  };
 }
 
 export async function createReservation(input: {
@@ -78,6 +105,7 @@ export async function createReservation(input: {
   phone: string;
   email?: string;
   paymentMethodId: string;
+  currency?: string;
 }) {
   const parsed = reserveSchema.safeParse({
     ...input,
@@ -122,11 +150,43 @@ export async function createReservation(input: {
     return { ok: false as const, error: "Método de pago inválido." };
   }
 
+  // Moneda elegida: debe estar configurada en la rifa; el precio sale de ahí
+  const currencyRows = await db
+    .select()
+    .from(raffleCurrencies)
+    .where(eq(raffleCurrencies.raffleId, raffle.id))
+    .orderBy(asc(raffleCurrencies.position));
+
+  const requestedCode = parsed.data.currency?.toUpperCase();
+  let chosenCode = raffle.currency;
+  let unitPrice = Number(raffle.pricePerTicket);
+  if (currencyRows.length > 0) {
+    const chosen = requestedCode
+      ? currencyRows.find((c) => c.code === requestedCode)
+      : currencyRows[0];
+    if (!chosen) {
+      return {
+        ok: false as const,
+        error: "Moneda no disponible para esta rifa.",
+      };
+    }
+    chosenCode = chosen.code;
+    unitPrice = Number(chosen.pricePerTicket);
+  } else if (requestedCode && requestedCode !== raffle.currency) {
+    return { ok: false as const, error: "Moneda no disponible para esta rifa." };
+  }
+
+  if (method.currency && method.currency !== chosenCode) {
+    return {
+      ok: false as const,
+      error: "El método de pago no acepta la moneda elegida.",
+    };
+  }
+
   const reservedUntil = new Date(
     Date.now() + raffle.reservationMinutes * 60 * 1000,
   );
-  const total =
-    Number(raffle.pricePerTicket) * uniqueNumbers.length;
+  const total = unitPrice * uniqueNumbers.length;
 
   const orderId = nanoid();
 
@@ -155,6 +215,7 @@ export async function createReservation(input: {
     paymentMethodId: method.id,
     status: "pending_payment",
     totalAmount: total.toFixed(2),
+    currency: chosenCode,
     ticketCount: uniqueNumbers.length,
     participantName: parsed.data.name,
     participantPhone: parsed.data.phone,
@@ -292,6 +353,7 @@ export async function submitPaymentProof(formData: FormData) {
       participantName: order.participantName,
       participantPhone: order.participantPhone,
       totalAmount: order.totalAmount,
+      currency: order.currency,
     });
 
     return { ok: true as const };
@@ -365,6 +427,7 @@ const donationSchema = z.object({
   phone: z.string().trim().min(6).max(40),
   email: z.string().trim().email().optional().or(z.literal("")),
   paymentMethodId: z.string().min(1),
+  currency: z.string().trim().max(6).optional(),
 });
 
 export async function createDonation(input: {
@@ -374,6 +437,7 @@ export async function createDonation(input: {
   phone: string;
   email?: string;
   paymentMethodId: string;
+  currency?: string;
 }) {
   const parsed = donationSchema.safeParse({
     ...input,
@@ -415,6 +479,36 @@ export async function createDonation(input: {
     return { ok: false as const, error: "Método de pago inválido." };
   }
 
+  const donationCurrencyRows = await db
+    .select()
+    .from(raffleCurrencies)
+    .where(eq(raffleCurrencies.raffleId, raffle.id))
+    .orderBy(asc(raffleCurrencies.position));
+
+  const requestedCode = parsed.data.currency?.toUpperCase();
+  let chosenCode = raffle.currency;
+  if (donationCurrencyRows.length > 0) {
+    const chosen = requestedCode
+      ? donationCurrencyRows.find((c) => c.code === requestedCode)
+      : donationCurrencyRows[0];
+    if (!chosen) {
+      return {
+        ok: false as const,
+        error: "Moneda no disponible para esta rifa.",
+      };
+    }
+    chosenCode = chosen.code;
+  } else if (requestedCode && requestedCode !== raffle.currency) {
+    return { ok: false as const, error: "Moneda no disponible para esta rifa." };
+  }
+
+  if (method.currency && method.currency !== chosenCode) {
+    return {
+      ok: false as const,
+      error: "El método de pago no acepta la moneda elegida.",
+    };
+  }
+
   const donationId = nanoid();
   await db.insert(donations).values({
     id: donationId,
@@ -422,6 +516,7 @@ export async function createDonation(input: {
     paymentMethodId: method.id,
     status: "pending_payment",
     amount: parsed.data.amount.toFixed(2),
+    currency: chosenCode,
     donorName: parsed.data.name,
     donorPhone: parsed.data.phone,
     donorEmail: parsed.data.email || null,

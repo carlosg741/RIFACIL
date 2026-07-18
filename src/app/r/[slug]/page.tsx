@@ -18,7 +18,11 @@ export default async function RafflePage({
   const { slug } = await params;
   const data = await getRaffleBySlug(slug);
   if (!data) notFound();
-  const { raffle, prizes, tickets, paymentMethods } = data;
+  const { raffle, prizes, currencies, tickets, paymentMethods } = data;
+  const currencyViews = currencies.map((c) => ({
+    code: c.code,
+    pricePerTicket: c.pricePerTicket,
+  }));
   const displayPrizes =
     prizes.length > 0
       ? prizes
@@ -92,7 +96,10 @@ export default async function RafflePage({
           )}
           <div className="flex flex-wrap gap-4 font-binance-num text-sm text-muted-foreground">
             <span>
-              {formatMoney(raffle.pricePerTicket, raffle.currency)} / número
+              {currencyViews
+                .map((c) => formatMoney(c.pricePerTicket, c.code))
+                .join(" · ")}{" "}
+              / número
             </span>
             {raffle.drawAt && (
               <span>
@@ -120,6 +127,7 @@ export default async function RafflePage({
             raffle={raffle}
             tickets={tickets}
             paymentMethods={paymentMethods}
+            currencies={currencyViews}
           />
         ) : (
           <div className="rounded-2xl border bg-card p-8 text-center">

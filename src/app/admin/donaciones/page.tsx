@@ -54,7 +54,8 @@ export default async function AdminDonationsPage({
             No hay donaciones todavía.
           </p>
         )}
-        {rows.map(({ donation, raffleTitle, raffleSlug, methodName }) => (
+        {rows.map(
+          ({ donation, raffleTitle, raffleSlug, raffleCurrency, methodName }) => (
           <article
             key={donation.id}
             className="rounded-xl border bg-card p-5"
@@ -79,7 +80,10 @@ export default async function AdminDonationsPage({
                   {methodName || "—"}
                 </p>
                 <p className="mt-1 font-binance-num text-lg font-semibold text-primary">
-                  {formatMoney(donation.amount)}
+                  {formatMoney(
+                    donation.amount,
+                    donation.currency || raffleCurrency,
+                  )}
                 </p>
               </div>
               {(donation.status === "under_review" ||
@@ -106,7 +110,8 @@ export default async function AdminDonationsPage({
               </div>
             )}
           </article>
-        ))}
+          ),
+        )}
       </div>
     </div>
   );

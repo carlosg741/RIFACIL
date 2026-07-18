@@ -57,7 +57,8 @@ export default async function AdminDashboardPage() {
                 </tr>
               </thead>
               <tbody>
-                {data.pendingOrders.map(({ order, raffleTitle, raffleSlug }) => (
+                {data.pendingOrders.map(
+                  ({ order, raffleTitle, raffleSlug, raffleCurrency }) => (
                   <tr key={order.id} className="border-b last:border-0">
                     <td className="p-3">
                       <Link
@@ -75,14 +76,20 @@ export default async function AdminDashboardPage() {
                         {raffleTitle}
                       </Link>
                     </td>
-                    <td className="p-3">{formatMoney(order.totalAmount)}</td>
+                    <td className="p-3">
+                      {formatMoney(
+                        order.totalAmount,
+                        order.currency || raffleCurrency,
+                      )}
+                    </td>
                     <td className="p-3">
                       <Badge variant="secondary">
                         {orderStatusLabel[order.status]}
                       </Badge>
                     </td>
                   </tr>
-                ))}
+                  ),
+                )}
               </tbody>
             </table>
           </div>

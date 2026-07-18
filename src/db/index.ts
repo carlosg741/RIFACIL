@@ -132,6 +132,19 @@ CREATE TABLE IF NOT EXISTS raffle_prizes (
 CREATE UNIQUE INDEX IF NOT EXISTS raffle_prizes_raffle_position_idx
   ON raffle_prizes(raffle_id, position);
 
+CREATE TABLE IF NOT EXISTS raffle_currencies (
+  id text PRIMARY KEY,
+  raffle_id text NOT NULL REFERENCES raffles(id) ON DELETE CASCADE,
+  code text NOT NULL,
+  price_per_ticket numeric(12,2) NOT NULL,
+  position integer NOT NULL,
+  created_at timestamptz DEFAULT now() NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS raffle_currencies_raffle_code_idx
+  ON raffle_currencies(raffle_id, code);
+CREATE INDEX IF NOT EXISTS raffle_currencies_raffle_idx
+  ON raffle_currencies(raffle_id);
+
 CREATE TABLE IF NOT EXISTS payment_methods (
   id text PRIMARY KEY,
   organization_id text NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
@@ -141,6 +154,7 @@ CREATE TABLE IF NOT EXISTS payment_methods (
   account_info text,
   account_holder text,
   qr_image_url text,
+  currency text,
   active boolean NOT NULL DEFAULT true,
   sort_order integer NOT NULL DEFAULT 0,
   created_at timestamptz DEFAULT now() NOT NULL
@@ -153,6 +167,7 @@ CREATE TABLE IF NOT EXISTS donations (
   payment_method_id text REFERENCES payment_methods(id) ON DELETE SET NULL,
   status donation_status NOT NULL DEFAULT 'pending_payment',
   amount numeric(12,2) NOT NULL,
+  currency text,
   donor_name text NOT NULL,
   donor_phone text NOT NULL,
   donor_email text,
@@ -171,6 +186,7 @@ CREATE TABLE IF NOT EXISTS orders (
   payment_method_id text REFERENCES payment_methods(id) ON DELETE SET NULL,
   status order_status NOT NULL DEFAULT 'pending_payment',
   total_amount numeric(12,2) NOT NULL,
+  currency text,
   ticket_count integer NOT NULL,
   participant_name text NOT NULL,
   participant_phone text NOT NULL,
@@ -301,6 +317,29 @@ const MIGRATIONS = [
      SELECT id FROM organizations WHERE is_platform = true
    )
    AND role IN ('admin', 'super_admin')`,
+  // Multi-moneda: monedas por rifa, moneda por método y por orden/donación
+  `CREATE TABLE IF NOT EXISTS raffle_currencies (
+    id text PRIMARY KEY,
+    raffle_id text NOT NULL REFERENCES raffles(id) ON DELETE CASCADE,
+    code text NOT NULL,
+    price_per_ticket numeric(12,2) NOT NULL,
+    position integer NOT NULL,
+    created_at timestamptz DEFAULT now() NOT NULL
+  )`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS raffle_currencies_raffle_code_idx
+   ON raffle_currencies(raffle_id, code)`,
+  `CREATE INDEX IF NOT EXISTS raffle_currencies_raffle_idx
+   ON raffle_currencies(raffle_id)`,
+  `ALTER TABLE payment_methods ADD COLUMN IF NOT EXISTS currency text`,
+  `ALTER TABLE orders ADD COLUMN IF NOT EXISTS currency text`,
+  `ALTER TABLE donations ADD COLUMN IF NOT EXISTS currency text`,
+  // Conserva la moneda y precio actuales de cada rifa como moneda principal
+  `INSERT INTO raffle_currencies (id, raffle_id, code, price_per_ticket, position)
+   SELECT r.id || '-legacy-currency', r.id, r.currency, r.price_per_ticket, 1
+   FROM raffles r
+   WHERE NOT EXISTS (
+     SELECT 1 FROM raffle_currencies rc WHERE rc.raffle_id = r.id
+   )`,
 ];
 
 async function applyMigrations() {

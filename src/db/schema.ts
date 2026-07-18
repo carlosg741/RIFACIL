@@ -89,6 +89,8 @@ export const paymentMethods = pgTable(
     accountInfo: text("account_info"),
     accountHolder: text("account_holder"),
     qrImageUrl: text("qr_image_url"),
+    /** Moneda que acepta este método (null = todas las monedas de la rifa) */
+    currency: text("currency"),
     active: boolean("active").notNull().default(true),
     sortOrder: integer("sort_order").notNull().default(0),
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -134,6 +136,31 @@ export const raffles = pgTable(
   ],
 );
 
+export const raffleCurrencies = pgTable(
+  "raffle_currencies",
+  {
+    id: id(),
+    raffleId: text("raffle_id")
+      .notNull()
+      .references(() => raffles.id, { onDelete: "cascade" }),
+    /** Código de moneda: PEN, USD, USDT, VES, EUR, COP, CLP, BRL… */
+    code: text("code").notNull(),
+    pricePerTicket: numeric("price_per_ticket", {
+      precision: 12,
+      scale: 2,
+    }).notNull(),
+    /** Orden de aparición; la posición 1 es la moneda principal */
+    position: integer("position").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [
+    uniqueIndex("raffle_currencies_raffle_code_idx").on(t.raffleId, t.code),
+    index("raffle_currencies_raffle_idx").on(t.raffleId),
+  ],
+);
+
 export const rafflePrizes = pgTable(
   "raffle_prizes",
   {
@@ -170,6 +197,8 @@ export const donations = pgTable(
     ),
     status: donationStatusEnum("status").notNull().default("pending_payment"),
     amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),
+    /** Moneda elegida por el donante (null = moneda base de la rifa) */
+    currency: text("currency"),
     donorName: text("donor_name").notNull(),
     donorPhone: text("donor_phone").notNull(),
     donorEmail: text("donor_email"),
@@ -224,6 +253,8 @@ export const orders = pgTable(
     ),
     status: orderStatusEnum("status").notNull().default("pending_payment"),
     totalAmount: numeric("total_amount", { precision: 12, scale: 2 }).notNull(),
+    /** Moneda elegida por el participante (null = moneda base de la rifa) */
+    currency: text("currency"),
     ticketCount: integer("ticket_count").notNull(),
     participantName: text("participant_name").notNull(),
     participantPhone: text("participant_phone").notNull(),
@@ -308,8 +339,19 @@ export const rafflesRelations = relations(raffles, ({ one, many }) => ({
   donations: many(donations),
   paymentMethods: many(paymentMethods),
   prizes: many(rafflePrizes),
+  currencies: many(raffleCurrencies),
   draw: one(draws),
 }));
+
+export const raffleCurrenciesRelations = relations(
+  raffleCurrencies,
+  ({ one }) => ({
+    raffle: one(raffles, {
+      fields: [raffleCurrencies.raffleId],
+      references: [raffles.id],
+    }),
+  }),
+);
 
 export const rafflePrizesRelations = relations(rafflePrizes, ({ one }) => ({
   raffle: one(raffles, {
@@ -365,6 +407,7 @@ export type Organization = typeof organizations.$inferSelect;
 export type User = typeof users.$inferSelect;
 export type Raffle = typeof raffles.$inferSelect;
 export type RafflePrize = typeof rafflePrizes.$inferSelect;
+export type RaffleCurrency = typeof raffleCurrencies.$inferSelect;
 export type Ticket = typeof tickets.$inferSelect;
 export type Order = typeof orders.$inferSelect;
 export type PaymentMethod = typeof paymentMethods.$inferSelect;

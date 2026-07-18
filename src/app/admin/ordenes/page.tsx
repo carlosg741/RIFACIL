@@ -65,7 +65,15 @@ export default async function AdminOrdersPage({
           </p>
         )}
         {withTickets.map(
-          ({ order, raffleTitle, raffleSlug, proofUrl, methodName, ticketNumbers }) => {
+          ({
+            order,
+            raffleTitle,
+            raffleSlug,
+            raffleCurrency,
+            proofUrl,
+            methodName,
+            ticketNumbers,
+          }) => {
             const highlight = sp.highlight === order.id;
             return (
               <article
@@ -100,7 +108,11 @@ export default async function AdminOrdersPage({
                       </span>
                     </p>
                     <p className="mt-1 text-sm font-binance-num">
-                      {formatMoney(order.totalAmount)} · {methodName || "—"}
+                      {formatMoney(
+                        order.totalAmount,
+                        order.currency || raffleCurrency,
+                      )}{" "}
+                      · {methodName || "—"}
                     </p>
                   </div>
                   <div className="flex flex-col items-end gap-2">

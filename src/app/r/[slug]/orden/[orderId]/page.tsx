@@ -67,7 +67,7 @@ export default async function OrderPage({
             </span>
           </p>
           <p className="font-binance-num text-lg font-semibold text-primary">
-            Total: {formatMoney(order.totalAmount, raffle.currency)}
+            Total: {formatMoney(order.totalAmount, order.currency || raffle.currency)}
           </p>
           {order.reservedUntil && order.status !== "paid" && (
             <p className="text-sm text-accent">
@@ -141,7 +141,7 @@ export default async function OrderPage({
               numbers={tickets.map((t) => t.number)}
               totalTickets={raffle.totalTickets}
               totalAmount={order.totalAmount}
-              currency={raffle.currency}
+              currency={order.currency || raffle.currency}
               status={order.status}
               drawAt={raffle.drawAt}
               raffleStatus={raffle.status}

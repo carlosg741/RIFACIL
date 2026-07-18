@@ -107,6 +107,7 @@ export async function POST(request: Request) {
       participantName: order.participantName,
       participantPhone: order.participantPhone,
       totalAmount: order.totalAmount,
+      currency: order.currency,
     });
 
     return NextResponse.json({

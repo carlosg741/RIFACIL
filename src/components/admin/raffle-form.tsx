@@ -15,8 +15,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { createRaffle, updateRaffle } from "@/lib/actions/admin";
+import { CURRENCY_OPTIONS } from "@/lib/currencies";
 import { toLocalDateTimeValue } from "@/lib/urls";
-import type { Raffle, RafflePrize } from "@/db/schema";
+import type { Raffle, RaffleCurrency, RafflePrize } from "@/db/schema";
 
 type PrizeDraft = {
   key: string;
@@ -24,6 +25,19 @@ type PrizeDraft = {
   description: string;
   imageUrl: string;
 };
+
+type CurrencyDraft = {
+  key: string;
+  code: string;
+  price: string;
+};
+
+function currencyOptionsFor(code: string) {
+  if (CURRENCY_OPTIONS.some((option) => option.code === code)) {
+    return CURRENCY_OPTIONS;
+  }
+  return [{ code, label: code }, ...CURRENCY_OPTIONS];
+}
 
 function newPrize(position: number, key = `new-prize-${position}`): PrizeDraft {
   return {
@@ -37,9 +51,11 @@ function newPrize(position: number, key = `new-prize-${position}`): PrizeDraft {
 export function RaffleForm({
   raffle,
   initialPrizes = [],
+  initialCurrencies = [],
 }: {
   raffle?: Raffle;
   initialPrizes?: RafflePrize[];
+  initialCurrencies?: RaffleCurrency[];
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -71,6 +87,25 @@ export function RaffleForm({
     }
     return [newPrize(1)];
   });
+  const [currencies, setCurrencies] = useState<CurrencyDraft[]>(() => {
+    if (initialCurrencies.length > 0) {
+      return initialCurrencies.map((item) => ({
+        key: item.id,
+        code: item.code,
+        price: String(item.pricePerTicket),
+      }));
+    }
+    if (raffle) {
+      return [
+        {
+          key: `${raffle.id}-legacy-currency`,
+          code: raffle.currency,
+          price: String(raffle.pricePerTicket),
+        },
+      ];
+    }
+    return [{ key: "currency-1", code: "PEN", price: "10" }];
+  });
   const [donationsEnabled, setDonationsEnabled] = useState(
     raffle?.donationsEnabled ?? false,
   );
@@ -83,6 +118,24 @@ export function RaffleForm({
         prizeIndex === index ? { ...prize, ...patch } : prize,
       ),
     );
+  }
+
+  function updateCurrency(index: number, patch: Partial<CurrencyDraft>) {
+    setCurrencies((current) =>
+      current.map((item, itemIndex) =>
+        itemIndex === index ? { ...item, ...patch } : item,
+      ),
+    );
+  }
+
+  function moveCurrency(index: number, direction: -1 | 1) {
+    const nextIndex = index + direction;
+    if (nextIndex < 0 || nextIndex >= currencies.length) return;
+    setCurrencies((current) => {
+      const next = [...current];
+      [next[index], next[nextIndex]] = [next[nextIndex]!, next[index]!];
+      return next;
+    });
   }
 
   function movePrize(index: number, direction: -1 | 1) {
@@ -159,13 +212,37 @@ export function RaffleForm({
       return;
     }
     const firstPrize = normalizedPrizes[0]!;
+
+    const normalizedCurrencies = currencies.map((item) => ({
+      code: item.code.trim().toUpperCase(),
+      pricePerTicket: Number(item.price),
+    }));
+    if (
+      normalizedCurrencies.some(
+        (item) =>
+          item.code.length < 2 ||
+          !item.pricePerTicket ||
+          item.pricePerTicket <= 0,
+      )
+    ) {
+      toast.error("Cada moneda necesita un código y un precio mayor a 0.");
+      return;
+    }
+    const codes = normalizedCurrencies.map((item) => item.code);
+    if (new Set(codes).size !== codes.length) {
+      toast.error("Hay monedas repetidas. Cada moneda debe ser distinta.");
+      return;
+    }
+    const firstCurrency = normalizedCurrencies[0]!;
+
     const payload = {
       title: String(fd.get("title") || ""),
       slug: String(fd.get("slug") || "") || undefined,
       description: String(fd.get("description") || ""),
       prize: firstPrize.title,
-      pricePerTicket: Number(fd.get("pricePerTicket")),
-      currency: String(fd.get("currency") || "PEN"),
+      pricePerTicket: firstCurrency.pricePerTicket,
+      currency: firstCurrency.code,
+      currencies: normalizedCurrencies,
       totalTickets: Number(fd.get("totalTickets")),
       reservationMinutes: Number(fd.get("reservationMinutes") || 30),
       winnerCount: normalizedPrizes.length,
@@ -223,28 +300,118 @@ export function RaffleForm({
           rows={3}
         />
       </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="pricePerTicket">Precio / número</Label>
-          <Input
-            id="pricePerTicket"
-            name="pricePerTicket"
-            type="number"
-            step="0.01"
-            min="0.01"
-            defaultValue={raffle?.pricePerTicket || "10"}
-            required
-          />
+      <div className="space-y-3 rounded-xl border border-primary/30 bg-secondary/30 p-4">
+        <div>
+          <Label>Monedas y precios</Label>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Agrega las monedas en las que se puede pagar la rifa, cada una con
+            su precio por número. La primera es la moneda principal.
+          </p>
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="currency">Moneda</Label>
-          <Input
-            id="currency"
-            name="currency"
-            defaultValue={raffle?.currency || "PEN"}
-            maxLength={3}
-          />
-        </div>
+
+        {currencies.map((item, index) => (
+          <div
+            key={item.key}
+            className="space-y-2 rounded-lg border border-border bg-card p-3"
+          >
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-sm font-semibold text-primary">
+                {index === 0 ? "Moneda principal" : `Moneda ${index + 1}`}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={index === 0}
+                  onClick={() => moveCurrency(index, -1)}
+                >
+                  Subir
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  disabled={currencies.length === 1}
+                  onClick={() =>
+                    setCurrencies((current) =>
+                      current.filter((_, itemIndex) => itemIndex !== index),
+                    )
+                  }
+                >
+                  Quitar
+                </Button>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label htmlFor={`currency-code-${index}`}>Moneda</Label>
+                <Select
+                  value={item.code}
+                  items={currencyOptionsFor(item.code).map((option) => ({
+                    value: option.code,
+                    label: option.label,
+                  }))}
+                  onValueChange={(v) =>
+                    updateCurrency(index, { code: v ?? item.code })
+                  }
+                >
+                  <SelectTrigger id={`currency-code-${index}`} className="w-full">
+                    <SelectValue placeholder="Elige la moneda" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {currencyOptionsFor(item.code).map((option) => (
+                      <SelectItem key={option.code} value={option.code}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor={`currency-price-${index}`}>
+                  Precio / número
+                </Label>
+                <Input
+                  id={`currency-price-${index}`}
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  value={item.price}
+                  onChange={(event) =>
+                    updateCurrency(index, { price: event.target.value })
+                  }
+                  required
+                />
+              </div>
+            </div>
+          </div>
+        ))}
+
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full"
+          disabled={currencies.length >= 20}
+          onClick={() =>
+            setCurrencies((current) => {
+              const used = new Set(current.map((c) => c.code));
+              const nextCode =
+                CURRENCY_OPTIONS.find((option) => !used.has(option.code))
+                  ?.code ?? "USD";
+              return [
+                ...current,
+                {
+                  key: crypto.randomUUID(),
+                  code: nextCode,
+                  price: current[0]?.price || "10",
+                },
+              ];
+            })
+          }
+        >
+          Agregar otra moneda
+        </Button>
       </div>
       {!isEdit && (
         <div className="space-y-2">
