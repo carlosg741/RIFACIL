@@ -43,8 +43,8 @@ export default async function AdminLayout({
             <Image
               src="/rifacil-logo.png"
               alt="Rifacil"
-              width={52}
-              height={28}
+              width={56}
+              height={26}
               className="h-7 w-auto object-contain"
             />
             <span className="font-[family-name:var(--font-display)] text-xl font-bold text-primary">

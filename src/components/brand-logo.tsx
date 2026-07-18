@@ -3,9 +3,9 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 
 const SIZE = {
-  sm: { width: 52, height: 28 },
-  md: { width: 68, height: 37 },
-  lg: { width: 96, height: 52 },
+  sm: { width: 56, height: 26 },
+  md: { width: 72, height: 34 },
+  lg: { width: 104, height: 49 },
 } as const;
 
 export function BrandLogo({

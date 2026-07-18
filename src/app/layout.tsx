@@ -48,8 +48,8 @@ export const metadata: Metadata = {
     images: [
       {
         url: "/rifacil-logo.png",
-        width: 794,
-        height: 434,
+        width: 731,
+        height: 346,
         alt: "Rifacil",
       },
     ],
