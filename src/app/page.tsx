@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Mail } from "lucide-react";
+import { Check, Mail } from "lucide-react";
 import { getActiveDemoSlug } from "@/lib/actions/public";
 import {
   CONTACT_EMAIL,
@@ -13,6 +13,13 @@ import { WhatsAppFloat } from "@/components/whatsapp-float";
 
 /** Evita PGlite/DB en el build estático de Vercel */
 export const dynamic = "force-dynamic";
+
+const LANDING_BENEFITS = [
+  "Talonario digital con números en vivo",
+  "Recibe comprobantes y aprueba pagos",
+  "Varios premios con fotos",
+  "Sorteo con ticket digital para cada participante",
+] as const;
 
 export default async function HomePage() {
   let demoSlug = "demo";
@@ -46,7 +53,7 @@ export default async function HomePage() {
       </header>
 
       <main className="flex-1">
-        <section className="hero-mesh relative min-h-[100svh] overflow-hidden px-6 pb-16 pt-28 md:px-10 md:pt-32">
+        <section className="hero-mesh relative overflow-hidden px-6 pb-16 pt-28 md:px-10 md:pb-20 md:pt-32">
           <div className="pointer-events-none absolute -right-16 top-28 h-72 w-72 rounded-full bg-primary/15 blur-3xl animate-float-slow" />
           <div className="pointer-events-none absolute bottom-16 left-8 h-56 w-56 rounded-full bg-accent/10 blur-3xl" />
 
@@ -54,9 +61,9 @@ export default async function HomePage() {
             <div className="animate-fade-up mb-6">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src="/rifacil-logo.jpeg"
+                src="/rifacil-logo.png"
                 alt="Rifacil"
-                className="h-20 w-20 rounded-xl object-cover shadow-lg ring-2 ring-primary/40 sm:h-24 sm:w-24"
+                className="h-16 w-auto max-w-[220px] object-contain drop-shadow-lg sm:h-20 sm:max-w-[280px]"
               />
             </div>
             <p className="animate-fade-up font-[family-name:var(--font-display)] text-6xl font-bold tracking-tight text-primary sm:text-7xl md:text-8xl">
@@ -83,6 +90,31 @@ export default async function HomePage() {
               <ButtonLink href="#contacto" size="lg" variant="secondary">
                 Solicitar mi panel
               </ButtonLink>
+            </div>
+
+            <div className="animate-fade-up mt-14 max-w-2xl border-t border-primary/20 pt-10 [animation-delay:280ms]">
+              <p className="font-[family-name:var(--font-display)] text-2xl font-semibold leading-snug text-foreground sm:text-3xl">
+                Organiza tu rifa{" "}
+                <span className="text-primary">
+                  fácil, transparente y desde el celular, computadora o
+                  tablets.
+                </span>
+              </p>
+              <ul className="mt-8 space-y-0">
+                {LANDING_BENEFITS.map((benefit) => (
+                  <li
+                    key={benefit}
+                    className="flex items-center gap-3 border-b border-primary/15 py-4 last:border-b-0"
+                  >
+                    <span className="flex size-7 shrink-0 items-center justify-center rounded-full border border-primary/60 text-primary">
+                      <Check className="size-3.5" strokeWidth={3} aria-hidden />
+                    </span>
+                    <span className="text-sm text-foreground sm:text-base">
+                      {benefit}
+                    </span>
+                  </li>
+                ))}
+              </ul>
             </div>
           </div>
         </section>
@@ -185,10 +217,7 @@ export default async function HomePage() {
         <div className="mx-auto flex max-w-5xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <BrandLogo showWordmark className="opacity-90" />
           <div className="flex flex-col gap-1 sm:items-end">
-            <a
-              href={contactMailto()}
-              className="hover:text-primary"
-            >
+            <a href={contactMailto()} className="hover:text-primary">
               {CONTACT_EMAIL}
             </a>
             <a

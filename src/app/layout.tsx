@@ -33,9 +33,9 @@ export const metadata: Metadata = {
   description:
     "Crea rifas, gestiona boletos, recibe comprobantes de pago y sortea ganadores con transparencia.",
   icons: {
-    icon: [{ url: "/rifacil-logo.jpeg", type: "image/jpeg" }],
-    shortcut: "/rifacil-logo.jpeg",
-    apple: "/rifacil-logo.jpeg",
+    icon: [{ url: "/rifacil-icon.png", type: "image/png" }],
+    shortcut: "/rifacil-icon.png",
+    apple: "/apple-touch-icon.png",
   },
   openGraph: {
     type: "website",
@@ -47,9 +47,9 @@ export const metadata: Metadata = {
       "Crea rifas, gestiona boletos, recibe comprobantes de pago y sortea ganadores con transparencia.",
     images: [
       {
-        url: "/rifacil-logo.jpeg",
-        width: 1024,
-        height: 727,
+        url: "/rifacil-logo.png",
+        width: 794,
+        height: 434,
         alt: "Rifacil",
       },
     ],
@@ -59,7 +59,7 @@ export const metadata: Metadata = {
     title: "Rifacil — Talonario digital para rifas",
     description:
       "Crea rifas, gestiona boletos, recibe comprobantes de pago y sortea ganadores con transparencia.",
-    images: ["/rifacil-logo.jpeg"],
+    images: ["/rifacil-logo.png"],
   },
 };
 

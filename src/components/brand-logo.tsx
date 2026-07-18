@@ -2,6 +2,12 @@ import Image from "next/image";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
+const SIZE = {
+  sm: { width: 52, height: 28 },
+  md: { width: 68, height: 37 },
+  lg: { width: 96, height: 52 },
+} as const;
+
 export function BrandLogo({
   href = "/",
   size = "md",
@@ -13,7 +19,7 @@ export function BrandLogo({
   showWordmark?: boolean;
   className?: string;
 }) {
-  const dim = size === "sm" ? 28 : size === "lg" ? 48 : 36;
+  const dim = SIZE[size];
 
   return (
     <Link
@@ -21,11 +27,12 @@ export function BrandLogo({
       className={cn("inline-flex items-center gap-2.5", className)}
     >
       <Image
-        src="/rifacil-logo.jpeg"
+        src="/rifacil-logo.png"
         alt="Rifacil"
-        width={dim}
-        height={dim}
-        className="rounded-md object-cover"
+        width={dim.width}
+        height={dim.height}
+        className="h-auto w-auto object-contain"
+        style={{ width: dim.width, height: "auto" }}
         priority
       />
       {showWordmark && (

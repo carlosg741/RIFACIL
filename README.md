@@ -38,7 +38,7 @@ npm run dev
 
 ## Tipografía y marca
 
-- Logo: `public/rifacil-logo.jpeg`
+- Logo: `public/rifacil-logo.png` (icono: `public/rifacil-icon.png`)
 - Colores Binance: fondo `#0B0E11`, amarillo `#FCD535`, tinta `#181A20`
 - Fuentes: IBM Plex Sans / Mono (sustitutos abiertos de BinanceNova / BinancePlex)
 

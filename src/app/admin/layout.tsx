@@ -41,11 +41,11 @@ export default async function AdminLayout({
         <div className="flex items-center justify-between gap-3 px-4 py-5 md:block">
           <Link href="/admin" className="inline-flex items-center gap-2">
             <Image
-              src="/rifacil-logo.jpeg"
+              src="/rifacil-logo.png"
               alt="Rifacil"
-              width={32}
-              height={32}
-              className="rounded-md object-cover"
+              width={52}
+              height={28}
+              className="h-7 w-auto object-contain"
             />
             <span className="font-[family-name:var(--font-display)] text-xl font-bold text-primary">
               Rifacil

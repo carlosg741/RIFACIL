@@ -140,9 +140,9 @@ export function DigitalTicket({
           <div className="flex items-center gap-2">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src="/rifacil-logo.jpeg"
+              src="/rifacil-logo.png"
               alt=""
-              className="h-8 w-8 rounded object-cover"
+              className="h-8 w-auto rounded object-contain"
             />
             <span className="font-[family-name:var(--font-display)] text-lg font-bold">
               Rifacil
