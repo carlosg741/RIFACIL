@@ -65,6 +65,13 @@ async function storeFile(
     };
   }
 
+  // En Vercel (servidor sin disco público) hace falta Blob Storage.
+  if (process.env.VERCEL) {
+    throw new Error(
+      "Falta configurar el almacenamiento de imágenes. En Vercel: Storage → Blob → conectar al proyecto (BLOB_READ_WRITE_TOKEN).",
+    );
+  }
+
   try {
     const dir = path.join(process.cwd(), "public", "uploads", folder);
     await mkdir(dir, { recursive: true });
@@ -76,16 +83,9 @@ async function storeFile(
       mimeType: mime,
     };
   } catch {
-    if (buffer.length > 1.5 * 1024 * 1024) {
-      throw new Error(
-        "En producción configura BLOB_READ_WRITE_TOKEN. El archivo es grande para guardarlo temporalmente.",
-      );
-    }
-    return {
-      url: `data:${mime};base64,${buffer.toString("base64")}`,
-      fileName: file.name,
-      mimeType: mime,
-    };
+    throw new Error(
+      "No se pudo guardar la imagen en disco. Configura BLOB_READ_WRITE_TOKEN o revisa permisos de public/uploads.",
+    );
   }
 }
 

@@ -163,6 +163,11 @@ export function RaffleForm({
     if (!data.ok || !data.url) {
       throw new Error(data.error || "No se pudo subir la imagen");
     }
+    if (data.url.startsWith("data:")) {
+      throw new Error(
+        "La imagen no se guardó bien en el servidor. Configura Blob Storage en Vercel e inténtalo de nuevo.",
+      );
+    }
     return data.url;
   }
 

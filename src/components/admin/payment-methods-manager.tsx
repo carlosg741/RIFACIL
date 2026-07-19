@@ -83,6 +83,12 @@ export function PaymentMethodsManager({
         toast.error(data.error || "No se pudo subir el QR");
         return;
       }
+      if (data.url.startsWith("data:")) {
+        toast.error(
+          "El QR no se guardó bien. Configura Blob Storage en Vercel.",
+        );
+        return;
+      }
       setQrImageUrl(data.url);
       toast.success("QR cargado");
     } catch {
