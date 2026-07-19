@@ -36,7 +36,6 @@ export function DonationCheckout({
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
-  const [documentId, setDocumentId] = useState("");
   const [amount, setAmount] = useState("");
   const currencyList = currencies.length
     ? currencies
@@ -72,14 +71,6 @@ export function DonationCheckout({
       toast.error("Completa nombre, teléfono y método de pago.");
       return;
     }
-    if (method?.requiresDocumentId && documentId.trim().length < 4) {
-      toast.error("Ingresa tu cédula / DNI / ID.");
-      return;
-    }
-    if (method?.requiresEmail && !email.trim()) {
-      toast.error("Ingresa tu email.");
-      return;
-    }
     if (!amountNum || amountNum <= 0) {
       toast.error("Ingresa un monto válido para donar.");
       return;
@@ -97,7 +88,6 @@ export function DonationCheckout({
         name,
         phone,
         email,
-        documentId,
         paymentMethodId,
         currency: currencyCode,
       });
@@ -218,29 +208,14 @@ export function DonationCheckout({
             </p>
           )}
         </div>
-        {method?.requiresDocumentId && (
-          <div className="space-y-2">
-            <Label htmlFor="donor-document">Cédula / DNI / ID</Label>
-            <Input
-              id="donor-document"
-              value={documentId}
-              onChange={(e) => setDocumentId(e.target.value)}
-              placeholder="Número de documento"
-              required
-            />
-          </div>
-        )}
         <div className="space-y-2">
-          <Label htmlFor="donor-email">
-            Email{method?.requiresEmail ? "" : " (opcional)"}
-          </Label>
+          <Label htmlFor="donor-email">Email (opcional)</Label>
           <Input
             id="donor-email"
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="tu@email.com"
-            required={Boolean(method?.requiresEmail)}
           />
         </div>
       </div>

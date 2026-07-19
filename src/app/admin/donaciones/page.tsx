@@ -70,9 +70,6 @@ export default async function AdminDonationsPage({
                 </div>
                 <p className="text-sm text-muted-foreground">
                   {donation.donorPhone}
-                  {donation.donorDocumentId
-                    ? ` · ID ${donation.donorDocumentId}`
-                    : ""}
                   {donation.donorEmail ? ` · ${donation.donorEmail}` : ""}
                 </p>
                 <p className="mt-2 text-sm">

@@ -91,9 +91,6 @@ export default async function AdminOrdersPage({
                     </div>
                     <p className="text-sm text-muted-foreground">
                       {order.participantPhone}
-                      {order.participantDocumentId
-                        ? ` · ID ${order.participantDocumentId}`
-                        : ""}
                       {order.participantEmail
                         ? ` · ${order.participantEmail}`
                         : ""}

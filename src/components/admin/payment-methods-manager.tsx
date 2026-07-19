@@ -63,8 +63,8 @@ export function PaymentMethodsManager({
   const [instructions, setInstructions] = useState("");
   const [qrImageUrl, setQrImageUrl] = useState("");
   const [currency, setCurrency] = useState(ALL_CURRENCIES);
-  const [requiresDocumentId, setRequiresDocumentId] = useState(false);
-  const [requiresEmail, setRequiresEmail] = useState(false);
+  const [contactEmail, setContactEmail] = useState("");
+  const [documentId, setDocumentId] = useState("");
 
   async function uploadQr(file: File | undefined) {
     if (!file) return;
@@ -108,8 +108,8 @@ export function PaymentMethodsManager({
     setInstructions("");
     setQrImageUrl("");
     setCurrency(ALL_CURRENCIES);
-    setRequiresDocumentId(false);
-    setRequiresEmail(false);
+    setContactEmail("");
+    setDocumentId("");
   }
 
   function create() {
@@ -126,8 +126,8 @@ export function PaymentMethodsManager({
         accountHolder,
         qrImageUrl: qrImageUrl || undefined,
         currency: currency === ALL_CURRENCIES ? undefined : currency,
-        requiresDocumentId,
-        requiresEmail,
+        contactEmail: contactEmail || undefined,
+        documentId: documentId || undefined,
         active: true,
         sortOrder: methods.length + 1,
       });
@@ -184,15 +184,20 @@ export function PaymentMethodsManager({
                     Moneda:{" "}
                     {m.currency ? currencyLabel(m.currency) : "Todas las monedas"}
                   </p>
-                  <p className="text-xs text-muted-foreground">
-                    Pide:{" "}
-                    {[
-                      m.requiresDocumentId ? "Cédula/DNI" : null,
-                      m.requiresEmail ? "Email" : null,
-                    ]
-                      .filter(Boolean)
-                      .join(" · ") || "solo nombre y teléfono"}
-                  </p>
+                  {m.documentId && (
+                    <p className="text-sm">
+                      <span className="text-muted-foreground">
+                        Cédula / DNI / ID:
+                      </span>{" "}
+                      {m.documentId}
+                    </p>
+                  )}
+                  {m.contactEmail && (
+                    <p className="text-sm">
+                      <span className="text-muted-foreground">Email:</span>{" "}
+                      {m.contactEmail}
+                    </p>
+                  )}
                   {m.accountHolder && (
                     <p className="text-sm">
                       <span className="text-muted-foreground">A nombre de:</span>{" "}
@@ -261,48 +266,6 @@ export function PaymentMethodsManager({
                     ))}
                   </SelectContent>
                 </Select>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    size="sm"
-                    variant={m.requiresDocumentId ? "default" : "outline"}
-                    disabled={pending}
-                    onClick={() =>
-                      start(async () => {
-                        await updatePaymentMethod(m.id, {
-                          requiresDocumentId: !m.requiresDocumentId,
-                        });
-                        toast.success(
-                          m.requiresDocumentId
-                            ? "Ya no pide cédula/DNI"
-                            : "Ahora pide cédula/DNI",
-                        );
-                        router.refresh();
-                      })
-                    }
-                  >
-                    {m.requiresDocumentId ? "Cédula: sí" : "Cédula: no"}
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant={m.requiresEmail ? "default" : "outline"}
-                    disabled={pending}
-                    onClick={() =>
-                      start(async () => {
-                        await updatePaymentMethod(m.id, {
-                          requiresEmail: !m.requiresEmail,
-                        });
-                        toast.success(
-                          m.requiresEmail
-                            ? "Ya no pide email"
-                            : "Ahora pide email",
-                        );
-                        router.refresh();
-                      })
-                    }
-                  >
-                    {m.requiresEmail ? "Email: sí" : "Email: no"}
-                  </Button>
-                </div>
                 <div className="flex gap-2">
                   <Button
                     size="sm"
@@ -401,47 +364,39 @@ export function PaymentMethodsManager({
           </p>
         </div>
 
-        <div className="space-y-3 rounded-xl border border-border bg-secondary/30 p-4">
-          <p className="text-sm font-medium text-primary">
-            Datos extras del participante
-          </p>
-          <label className="flex cursor-pointer items-start gap-3">
-            <input
-              type="checkbox"
-              checked={requiresDocumentId}
-              onChange={(e) => setRequiresDocumentId(e.target.checked)}
-              className="mt-1 size-4 accent-[var(--primary)]"
-            />
-            <span className="text-sm">
-              Pedir <strong>Cédula / DNI / ID</strong>
-              <span className="mt-0.5 block text-xs text-muted-foreground">
-                Obligatorio en el checkout cuando elijan este método.
-              </span>
-            </span>
-          </label>
-          <label className="flex cursor-pointer items-start gap-3">
-            <input
-              type="checkbox"
-              checked={requiresEmail}
-              onChange={(e) => setRequiresEmail(e.target.checked)}
-              className="mt-1 size-4 accent-[var(--primary)]"
-            />
-            <span className="text-sm">
-              Pedir <strong>Email</strong> obligatorio
-              <span className="mt-0.5 block text-xs text-muted-foreground">
-                Si no marcas esto, el email sigue siendo opcional.
-              </span>
-            </span>
-          </label>
-        </div>
-
         <div className="space-y-2">
-          <Label>Número / cuenta</Label>
+          <Label>Número / cuenta / teléfono</Label>
           <Input
             value={accountInfo}
             onChange={(e) => setAccountInfo(e.target.value)}
             placeholder="999 888 777 o número de cuenta"
           />
+        </div>
+
+        <div className="space-y-2">
+          <Label>Cédula / DNI / ID (opcional)</Label>
+          <Input
+            value={documentId}
+            onChange={(e) => setDocumentId(e.target.value)}
+            placeholder="Documento del titular de la cuenta"
+          />
+          <p className="text-xs text-muted-foreground">
+            Para métodos que lo requieren (transferencias, algunos bancos,
+            etc.). Se muestra al comprador para que pague correctamente.
+          </p>
+        </div>
+
+        <div className="space-y-2">
+          <Label>Email de la cuenta (opcional)</Label>
+          <Input
+            type="email"
+            value={contactEmail}
+            onChange={(e) => setContactEmail(e.target.value)}
+            placeholder="paypal@ejemplo.com"
+          />
+          <p className="text-xs text-muted-foreground">
+            Para PayPal, Wise u otros métodos que cobran por email.
+          </p>
         </div>
 
         <div className="space-y-2">

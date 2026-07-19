@@ -121,6 +121,26 @@ export function PaymentMethodDetails({
               <CopyButton value={method.accountInfo} label="Número / cuenta" />
             </div>
           )}
+          {method.documentId && (
+            <div className="flex items-center gap-2">
+              <p className="min-w-0 flex-1">
+                <span className="text-muted-foreground">Cédula / DNI / ID:</span>{" "}
+                <span className="font-binance-num break-all">
+                  {method.documentId}
+                </span>
+              </p>
+              <CopyButton value={method.documentId} label="Documento" />
+            </div>
+          )}
+          {method.contactEmail && (
+            <div className="flex items-center gap-2">
+              <p className="min-w-0 flex-1 break-all">
+                <span className="text-muted-foreground">Email:</span>{" "}
+                {method.contactEmail}
+              </p>
+              <CopyButton value={method.contactEmail} label="Email" />
+            </div>
+          )}
           <p className="text-muted-foreground">{method.instructions}</p>
         </div>
       </div>

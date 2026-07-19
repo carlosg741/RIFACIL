@@ -93,10 +93,10 @@ export const paymentMethods = pgTable(
     qrImageUrl: text("qr_image_url"),
     /** Moneda que acepta este método (null = todas las monedas de la rifa) */
     currency: text("currency"),
-    /** Pide cédula / DNI / ID del participante */
-    requiresDocumentId: boolean("requires_document_id").notNull().default(false),
-    /** Pide email obligatorio (si no, el email sigue siendo opcional en checkout) */
-    requiresEmail: boolean("requires_email").notNull().default(false),
+    /** Email asociado a la cuenta de cobro (PayPal, Wise, etc.) */
+    contactEmail: text("contact_email"),
+    /** Cédula / DNI / ID del titular de la cuenta de cobro */
+    documentId: text("document_id"),
     active: boolean("active").notNull().default(true),
     sortOrder: integer("sort_order").notNull().default(0),
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -208,8 +208,6 @@ export const donations = pgTable(
     donorName: text("donor_name").notNull(),
     donorPhone: text("donor_phone").notNull(),
     donorEmail: text("donor_email"),
-    /** Cédula / DNI / documento de identidad */
-    donorDocumentId: text("donor_document_id"),
     proofUrl: text("proof_url"),
     proofFileName: text("proof_file_name"),
     notes: text("notes"),
@@ -267,8 +265,6 @@ export const orders = pgTable(
     participantName: text("participant_name").notNull(),
     participantPhone: text("participant_phone").notNull(),
     participantEmail: text("participant_email"),
-    /** Cédula / DNI / documento de identidad */
-    participantDocumentId: text("participant_document_id"),
     notes: text("notes"),
     reservedUntil: timestamp("reserved_until", { withTimezone: true }),
     reviewedAt: timestamp("reviewed_at", { withTimezone: true }),

@@ -776,8 +776,8 @@ const methodSchema = z.object({
   qrImageUrl: z.string().optional(),
   /** Moneda que acepta el método; "" o undefined = todas las monedas */
   currency: z.string().trim().max(6).optional(),
-  requiresDocumentId: z.boolean().default(false),
-  requiresEmail: z.boolean().default(false),
+  contactEmail: z.string().trim().email().optional().or(z.literal("")),
+  documentId: z.string().trim().max(40).optional().or(z.literal("")),
   active: z.boolean().default(true),
   sortOrder: z.coerce.number().int().default(0),
 });
@@ -819,8 +819,8 @@ export async function createPaymentMethod(raw: z.infer<typeof methodSchema>) {
     accountHolder: parsed.data.accountHolder || null,
     qrImageUrl: parsed.data.qrImageUrl || null,
     currency: parsed.data.currency?.toUpperCase() || null,
-    requiresDocumentId: parsed.data.requiresDocumentId,
-    requiresEmail: parsed.data.requiresEmail,
+    contactEmail: parsed.data.contactEmail || null,
+    documentId: parsed.data.documentId || null,
     active: parsed.data.active,
     sortOrder: parsed.data.sortOrder,
   });
@@ -888,14 +888,14 @@ export async function updatePaymentMethod(
         raw.currency !== undefined
           ? raw.currency?.toUpperCase() || null
           : current.currency,
-      requiresDocumentId:
-        raw.requiresDocumentId !== undefined
-          ? raw.requiresDocumentId
-          : current.requiresDocumentId,
-      requiresEmail:
-        raw.requiresEmail !== undefined
-          ? raw.requiresEmail
-          : current.requiresEmail,
+      contactEmail:
+        raw.contactEmail !== undefined
+          ? raw.contactEmail || null
+          : current.contactEmail,
+      documentId:
+        raw.documentId !== undefined
+          ? raw.documentId || null
+          : current.documentId,
       active: raw.active ?? current.active,
       sortOrder: raw.sortOrder ?? current.sortOrder,
     })
@@ -1206,8 +1206,8 @@ export async function createFreshDemoRaffle() {
           accountHolder: m.accountHolder,
           qrImageUrl: m.qrImageUrl,
           currency: m.currency,
-          requiresDocumentId: m.requiresDocumentId,
-          requiresEmail: m.requiresEmail,
+          contactEmail: m.contactEmail,
+          documentId: m.documentId,
           active: m.active,
           sortOrder: m.sortOrder ?? i + 1,
         })),

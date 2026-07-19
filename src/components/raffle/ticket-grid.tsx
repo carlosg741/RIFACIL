@@ -53,7 +53,6 @@ export function TicketGrid({
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
-  const [documentId, setDocumentId] = useState("");
   const currencyList = currencies.length
     ? currencies
     : [{ code: raffle.currency, pricePerTicket: raffle.pricePerTicket }];
@@ -122,17 +121,8 @@ export function TicketGrid({
   }
 
   function submit() {
-    const method = methodsForCurrency.find((m) => m.id === paymentMethodId);
     if (!name || !phone || !paymentMethodId) {
       toast.error("Completa nombre, teléfono y método de pago.");
-      return;
-    }
-    if (method?.requiresDocumentId && documentId.trim().length < 4) {
-      toast.error("Ingresa tu cédula / DNI / ID.");
-      return;
-    }
-    if (method?.requiresEmail && !email.trim()) {
-      toast.error("Ingresa tu email.");
       return;
     }
     startTransition(async () => {
@@ -142,7 +132,6 @@ export function TicketGrid({
         name,
         phone,
         email,
-        documentId,
         paymentMethodId,
         currency: activeCurrency.code,
       });
@@ -255,29 +244,14 @@ export function TicketGrid({
               </p>
             )}
           </div>
-          {method?.requiresDocumentId && (
-            <div className="space-y-2">
-              <Label htmlFor="documentId">Cédula / DNI / ID</Label>
-              <Input
-                id="documentId"
-                value={documentId}
-                onChange={(e) => setDocumentId(e.target.value)}
-                placeholder="Número de documento"
-                required
-              />
-            </div>
-          )}
           <div className="space-y-2">
-            <Label htmlFor="email">
-              Email{method?.requiresEmail ? "" : " (opcional)"}
-            </Label>
+            <Label htmlFor="email">Email (opcional)</Label>
             <Input
               id="email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="tu@email.com"
-              required={Boolean(method?.requiresEmail)}
             />
           </div>
         </div>
