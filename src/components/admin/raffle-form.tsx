@@ -211,6 +211,27 @@ export function RaffleForm({
       toast.error("Escribe el nombre de todos los premios.");
       return;
     }
+    if (
+      normalizedPrizes.some(
+        (prize) => (prize.description?.length ?? 0) > 2000,
+      )
+    ) {
+      toast.error("La descripción de un premio supera los 2000 caracteres.");
+      return;
+    }
+    if (
+      normalizedPrizes.some(
+        (prize) =>
+          prize.imageUrl &&
+          (prize.imageUrl.startsWith("data:") ||
+            prize.imageUrl.length > 2000),
+      )
+    ) {
+      toast.error(
+        "La imagen del premio debe subirse con “Adjuntar imagen” o usar una URL http/https. No pegues la imagen en base64.",
+      );
+      return;
+    }
     const firstPrize = normalizedPrizes[0]!;
 
     const normalizedCurrencies = currencies.map((item) => ({
@@ -638,8 +659,12 @@ export function RaffleForm({
                 onChange={(event) =>
                   updatePrize(index, { description: event.target.value })
                 }
-                rows={2}
+                rows={5}
+                maxLength={2000}
               />
+              <p className="text-xs text-muted-foreground">
+                {prize.description.length}/2000 caracteres
+              </p>
             </div>
 
             {prize.imageUrl ? (
@@ -686,12 +711,32 @@ export function RaffleForm({
               <Label htmlFor={`image-url-${index}`}>O URL de imagen</Label>
               <Input
                 id={`image-url-${index}`}
-                value={prize.imageUrl}
-                onChange={(event) =>
-                  updatePrize(index, { imageUrl: event.target.value })
+                value={
+                  prize.imageUrl.startsWith("data:") ? "" : prize.imageUrl
                 }
+                onChange={(event) => {
+                  const value = event.target.value.trim();
+                  if (value.startsWith("data:")) {
+                    toast.error(
+                      "No pegues la imagen aquí. Usa “Adjuntar imagen” para subirla.",
+                    );
+                    return;
+                  }
+                  updatePrize(index, { imageUrl: event.target.value });
+                }}
                 placeholder="https://..."
               />
+              {prize.imageUrl.startsWith("data:") ? (
+                <p className="text-xs text-amber-400">
+                  Hay una imagen pegada en texto (base64). Quítala y súbela con
+                  “Adjuntar imagen”.
+                </p>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  Solo URLs http/https. Para archivos locales usa “Adjuntar
+                  imagen”.
+                </p>
+              )}
             </div>
           </div>
         ))}

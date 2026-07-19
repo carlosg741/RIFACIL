@@ -365,8 +365,24 @@ const raffleSchema = z.object({
     .array(
       z.object({
         title: z.string().trim().min(2).max(200),
-        description: z.string().trim().max(500).optional(),
-        imageUrl: z.string().trim().optional(),
+        description: z
+          .string()
+          .trim()
+          .max(2000, "La descripción del premio admite máximo 2000 caracteres.")
+          .optional(),
+        imageUrl: z
+          .string()
+          .trim()
+          .max(2000, "La URL de imagen es demasiado larga.")
+          .refine(
+            (value) =>
+              !value ||
+              value.startsWith("http://") ||
+              value.startsWith("https://") ||
+              value.startsWith("/"),
+            "Usa una URL de imagen (http/https) o súbela con “Adjuntar imagen”. No pegues imágenes en base64.",
+          )
+          .optional(),
       }),
     )
     .min(1, "Agrega al menos un premio.")
