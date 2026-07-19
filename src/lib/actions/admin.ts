@@ -317,6 +317,101 @@ export async function rejectOrder(orderId: string) {
   return { ok: true as const };
 }
 
+/** Regresa una orden aprobada (pagada) al estado "en revisión". */
+export async function revertOrderToReview(orderId: string) {
+  const user = await requireAdmin();
+  await ensureSchema();
+  const db = await getDb();
+
+  const [row] = await db
+    .select({ order: orders, raffle: raffles })
+    .from(orders)
+    .innerJoin(raffles, eq(orders.raffleId, raffles.id))
+    .where(
+      and(
+        eq(orders.id, orderId),
+        eq(raffles.organizationId, user.organizationId),
+      ),
+    )
+    .limit(1);
+
+  if (!row) return { ok: false as const, error: "Orden no encontrada." };
+  if (row.order.status !== "paid") {
+    return {
+      ok: false as const,
+      error: "Solo puedes volver a revisión una orden ya aprobada.",
+    };
+  }
+
+  const now = new Date();
+  await db
+    .update(orders)
+    .set({ status: "under_review", reviewedAt: null, updatedAt: now })
+    .where(eq(orders.id, orderId));
+
+  await db
+    .update(tickets)
+    .set({ status: "reserved", updatedAt: now })
+    .where(eq(tickets.orderId, orderId));
+
+  revalidatePath("/admin");
+  revalidatePath("/admin/ordenes");
+  revalidatePath(`/r/${row.raffle.slug}`);
+  revalidatePath(`/r/${row.raffle.slug}/orden/${orderId}`);
+  return { ok: true as const };
+}
+
+/** Borra una orden por completo: libera sus números y elimina el comprobante. */
+export async function deleteOrder(orderId: string) {
+  const user = await requireAdmin();
+  await ensureSchema();
+  const db = await getDb();
+
+  const [row] = await db
+    .select({ order: orders, raffle: raffles })
+    .from(orders)
+    .innerJoin(raffles, eq(orders.raffleId, raffles.id))
+    .where(
+      and(
+        eq(orders.id, orderId),
+        eq(raffles.organizationId, user.organizationId),
+      ),
+    )
+    .limit(1);
+
+  if (!row) return { ok: false as const, error: "Orden no encontrada." };
+
+  const proofRows = await db
+    .select({ fileUrl: paymentProofs.fileUrl })
+    .from(paymentProofs)
+    .where(eq(paymentProofs.orderId, orderId));
+
+  const now = new Date();
+  // Liberar los números asociados antes de borrar la orden.
+  await db
+    .update(tickets)
+    .set({
+      status: "available",
+      orderId: null,
+      reservedUntil: null,
+      participantName: null,
+      participantPhone: null,
+      participantEmail: null,
+      updatedAt: now,
+    })
+    .where(eq(tickets.orderId, orderId));
+
+  // Los comprobantes se eliminan por cascada al borrar la orden.
+  await db.delete(orders).where(eq(orders.id, orderId));
+  await deleteStoredFiles(proofRows.map((r) => r.fileUrl));
+
+  revalidatePath("/admin");
+  revalidatePath("/admin/ordenes");
+  revalidatePath(`/r/${row.raffle.slug}`);
+  revalidatePath(`/r/${row.raffle.slug}/orden/${orderId}`);
+  return { ok: true as const };
+}
+
 export async function releaseExpiredNow() {
   await requireAdmin();
   const count = await releaseExpiredReservations();

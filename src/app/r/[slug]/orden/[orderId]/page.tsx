@@ -29,10 +29,9 @@ export default async function OrderPage({
   const digits = padDigitsForTotal(raffle.totalTickets);
   const canUpload =
     order.status === "pending_payment" || order.status === "rejected";
+  // El ticket solo se obtiene después de adjuntar el comprobante de pago.
   const showTicket =
-    order.status === "under_review" ||
-    order.status === "paid" ||
-    order.status === "pending_payment";
+    order.status === "under_review" || order.status === "paid";
 
   return (
     <div className="min-h-full bg-background">
@@ -115,7 +114,20 @@ export default async function OrderPage({
           </div>
         )}
 
-        {canUpload && <ProofUploadForm orderId={order.id} />}
+        {canUpload && (
+          <div className="space-y-3">
+            <div className="rounded-2xl border border-primary/30 bg-secondary/40 p-4 text-sm">
+              <p className="font-semibold text-primary">
+                Adjunta tu comprobante para obtener tu ticket
+              </p>
+              <p className="mt-1 text-muted-foreground">
+                Realiza el pago con los datos de arriba y sube la captura o PDF
+                del comprobante. Tu ticket digital se genera apenas lo envíes.
+              </p>
+            </div>
+            <ProofUploadForm orderId={order.id} />
+          </div>
+        )}
 
         {order.status === "under_review" && (
           <p className="text-center text-sm text-muted-foreground">
