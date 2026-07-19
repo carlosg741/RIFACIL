@@ -155,6 +155,8 @@ CREATE TABLE IF NOT EXISTS payment_methods (
   account_holder text,
   qr_image_url text,
   currency text,
+  requires_document_id boolean NOT NULL DEFAULT false,
+  requires_email boolean NOT NULL DEFAULT false,
   active boolean NOT NULL DEFAULT true,
   sort_order integer NOT NULL DEFAULT 0,
   created_at timestamptz DEFAULT now() NOT NULL
@@ -171,6 +173,7 @@ CREATE TABLE IF NOT EXISTS donations (
   donor_name text NOT NULL,
   donor_phone text NOT NULL,
   donor_email text,
+  donor_document_id text,
   proof_url text,
   proof_file_name text,
   notes text,
@@ -191,6 +194,7 @@ CREATE TABLE IF NOT EXISTS orders (
   participant_name text NOT NULL,
   participant_phone text NOT NULL,
   participant_email text,
+  participant_document_id text,
   notes text,
   reserved_until timestamptz,
   reviewed_at timestamptz,
@@ -351,6 +355,10 @@ const MIGRATIONS = [
        FOREIGN KEY (raffle_id) REFERENCES raffles(id) ON DELETE SET NULL;
    EXCEPTION WHEN duplicate_object THEN NULL;
    END $$`,
+  `ALTER TABLE payment_methods ADD COLUMN IF NOT EXISTS requires_document_id boolean NOT NULL DEFAULT false`,
+  `ALTER TABLE payment_methods ADD COLUMN IF NOT EXISTS requires_email boolean NOT NULL DEFAULT false`,
+  `ALTER TABLE orders ADD COLUMN IF NOT EXISTS participant_document_id text`,
+  `ALTER TABLE donations ADD COLUMN IF NOT EXISTS donor_document_id text`,
 ];
 
 async function applyMigrations() {

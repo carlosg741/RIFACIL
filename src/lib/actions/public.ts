@@ -26,6 +26,7 @@ const reserveSchema = z.object({
   name: z.string().trim().min(2).max(120),
   phone: z.string().trim().min(6).max(40),
   email: z.string().trim().email().optional().or(z.literal("")),
+  documentId: z.string().trim().max(40).optional().or(z.literal("")),
   paymentMethodId: z.string().min(1),
   currency: z.string().trim().max(6).optional(),
 });
@@ -104,12 +105,14 @@ export async function createReservation(input: {
   name: string;
   phone: string;
   email?: string;
+  documentId?: string;
   paymentMethodId: string;
   currency?: string;
 }) {
   const parsed = reserveSchema.safeParse({
     ...input,
     email: input.email || "",
+    documentId: input.documentId || "",
   });
   if (!parsed.success) {
     return { ok: false as const, error: "Datos inválidos." };
@@ -183,6 +186,20 @@ export async function createReservation(input: {
     };
   }
 
+  const documentId = parsed.data.documentId?.trim() || "";
+  if (method.requiresDocumentId && documentId.length < 4) {
+    return {
+      ok: false as const,
+      error: "Este método de pago requiere tu cédula / DNI / ID.",
+    };
+  }
+  if (method.requiresEmail && !parsed.data.email) {
+    return {
+      ok: false as const,
+      error: "Este método de pago requiere tu email.",
+    };
+  }
+
   const reservedUntil = new Date(
     Date.now() + raffle.reservationMinutes * 60 * 1000,
   );
@@ -220,6 +237,7 @@ export async function createReservation(input: {
     participantName: parsed.data.name,
     participantPhone: parsed.data.phone,
     participantEmail: parsed.data.email || null,
+    participantDocumentId: documentId || null,
     reservedUntil,
   });
 
@@ -426,6 +444,7 @@ const donationSchema = z.object({
   name: z.string().trim().min(2).max(120),
   phone: z.string().trim().min(6).max(40),
   email: z.string().trim().email().optional().or(z.literal("")),
+  documentId: z.string().trim().max(40).optional().or(z.literal("")),
   paymentMethodId: z.string().min(1),
   currency: z.string().trim().max(6).optional(),
 });
@@ -436,12 +455,14 @@ export async function createDonation(input: {
   name: string;
   phone: string;
   email?: string;
+  documentId?: string;
   paymentMethodId: string;
   currency?: string;
 }) {
   const parsed = donationSchema.safeParse({
     ...input,
     email: input.email || "",
+    documentId: input.documentId || "",
   });
   if (!parsed.success) {
     return { ok: false as const, error: "Datos inválidos." };
@@ -509,6 +530,20 @@ export async function createDonation(input: {
     };
   }
 
+  const documentId = parsed.data.documentId?.trim() || "";
+  if (method.requiresDocumentId && documentId.length < 4) {
+    return {
+      ok: false as const,
+      error: "Este método de pago requiere tu cédula / DNI / ID.",
+    };
+  }
+  if (method.requiresEmail && !parsed.data.email) {
+    return {
+      ok: false as const,
+      error: "Este método de pago requiere tu email.",
+    };
+  }
+
   const donationId = nanoid();
   await db.insert(donations).values({
     id: donationId,
@@ -520,6 +555,7 @@ export async function createDonation(input: {
     donorName: parsed.data.name,
     donorPhone: parsed.data.phone,
     donorEmail: parsed.data.email || null,
+    donorDocumentId: documentId || null,
   });
 
   revalidatePath(`/r/${raffle.slug}`);

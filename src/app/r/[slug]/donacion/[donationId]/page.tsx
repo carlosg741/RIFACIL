@@ -40,6 +40,18 @@ export default async function DonationStatusPage({
             <span className="text-muted-foreground">Teléfono:</span>{" "}
             {donation.donorPhone}
           </p>
+          {donation.donorDocumentId && (
+            <p>
+              <span className="text-muted-foreground">Cédula / DNI / ID:</span>{" "}
+              {donation.donorDocumentId}
+            </p>
+          )}
+          {donation.donorEmail && (
+            <p>
+              <span className="text-muted-foreground">Email:</span>{" "}
+              {donation.donorEmail}
+            </p>
+          )}
           <p className="font-binance-num text-lg font-semibold text-primary">
             Monto:{" "}
             {formatMoney(donation.amount, donation.currency || raffle.currency)}

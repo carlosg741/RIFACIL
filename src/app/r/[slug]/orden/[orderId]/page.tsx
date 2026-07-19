@@ -58,6 +58,18 @@ export default async function OrderPage({
             <span className="text-muted-foreground">Teléfono:</span>{" "}
             {order.participantPhone}
           </p>
+          {order.participantDocumentId && (
+            <p>
+              <span className="text-muted-foreground">Cédula / DNI / ID:</span>{" "}
+              {order.participantDocumentId}
+            </p>
+          )}
+          {order.participantEmail && (
+            <p>
+              <span className="text-muted-foreground">Email:</span>{" "}
+              {order.participantEmail}
+            </p>
+          )}
           <p>
             <span className="text-muted-foreground">Números:</span>{" "}
             <span className="font-binance-num">
