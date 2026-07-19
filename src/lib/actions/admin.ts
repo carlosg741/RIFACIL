@@ -906,6 +906,64 @@ export async function updatePaymentMethod(
   return { ok: true as const };
 }
 
+export async function duplicatePaymentMethod(
+  id: string,
+  targetRaffleId: string,
+) {
+  const user = await requireAdmin();
+  await ensureSchema();
+  const db = await getDb();
+
+  const [current] = await db
+    .select()
+    .from(paymentMethods)
+    .where(
+      and(
+        eq(paymentMethods.id, id),
+        eq(paymentMethods.organizationId, user.organizationId),
+      ),
+    )
+    .limit(1);
+  if (!current) {
+    return { ok: false as const, error: "Método no encontrado." };
+  }
+
+  const [raffle] = await db
+    .select({ id: raffles.id, title: raffles.title })
+    .from(raffles)
+    .where(
+      and(
+        eq(raffles.id, targetRaffleId),
+        eq(raffles.organizationId, user.organizationId),
+      ),
+    )
+    .limit(1);
+  if (!raffle) {
+    return { ok: false as const, error: "Rifa de destino no válida." };
+  }
+
+  const newId = nanoid();
+  await db.insert(paymentMethods).values({
+    id: newId,
+    organizationId: user.organizationId,
+    raffleId: raffle.id,
+    name: current.name,
+    instructions: current.instructions,
+    accountInfo: current.accountInfo,
+    accountHolder: current.accountHolder,
+    qrImageUrl: current.qrImageUrl,
+    currency: current.currency,
+    contactEmail: current.contactEmail,
+    documentId: current.documentId,
+    active: current.active,
+    sortOrder: current.sortOrder,
+  });
+
+  revalidatePath("/admin/metodos-pago");
+  revalidatePath("/r", "layout");
+  return { ok: true as const, id: newId, raffleTitle: raffle.title };
+}
+
 export async function deletePaymentMethod(id: string) {
   const user = await requireAdmin();
   await ensureSchema();

@@ -17,6 +17,7 @@ import {
 import {
   createPaymentMethod,
   deletePaymentMethod,
+  duplicatePaymentMethod,
   updatePaymentMethod,
 } from "@/lib/actions/admin";
 import { CURRENCY_OPTIONS, currencyLabel } from "@/lib/currencies";
@@ -65,6 +66,14 @@ export function PaymentMethodsManager({
   const [currency, setCurrency] = useState(ALL_CURRENCIES);
   const [contactEmail, setContactEmail] = useState("");
   const [documentId, setDocumentId] = useState("");
+  const [duplicateTargets, setDuplicateTargets] = useState<
+    Record<string, string>
+  >({});
+
+  function defaultDuplicateTarget(currentRaffleId: string | null) {
+    const other = raffles.find((r) => r.id !== currentRaffleId);
+    return other?.id ?? raffles[0]?.id ?? "";
+  }
 
   async function uploadQr(file: File | undefined) {
     if (!file) return;
@@ -266,6 +275,67 @@ export function PaymentMethodsManager({
                     ))}
                   </SelectContent>
                 </Select>
+                {raffles.length > 0 && (
+                  <div className="flex w-[200px] flex-col gap-1">
+                    <Select
+                      value={
+                        duplicateTargets[m.id] ||
+                        defaultDuplicateTarget(m.raffleId)
+                      }
+                      items={raffles.map((r) => ({
+                        value: r.id,
+                        label: r.title,
+                      }))}
+                      onValueChange={(v) =>
+                        setDuplicateTargets((prev) => ({
+                          ...prev,
+                          [m.id]: v ?? "",
+                        }))
+                      }
+                    >
+                      <SelectTrigger className="w-[200px]">
+                        <SelectValue placeholder="Duplicar en rifa…" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {raffles.map((r) => (
+                          <SelectItem key={r.id} value={r.id}>
+                            {r.title}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      disabled={pending || raffles.length === 0}
+                      onClick={() =>
+                        start(async () => {
+                          const target =
+                            duplicateTargets[m.id] ||
+                            defaultDuplicateTarget(m.raffleId);
+                          if (!target) {
+                            toast.error("Elige una rifa destino");
+                            return;
+                          }
+                          const res = await duplicatePaymentMethod(
+                            m.id,
+                            target,
+                          );
+                          if (!res.ok) {
+                            toast.error(res.error);
+                            return;
+                          }
+                          toast.success(
+                            `Método duplicado en “${res.raffleTitle}”`,
+                          );
+                          router.refresh();
+                        })
+                      }
+                    >
+                      Duplicar en esa rifa
+                    </Button>
+                  </div>
+                )}
                 <div className="flex gap-2">
                   <Button
                     size="sm"
@@ -327,7 +397,9 @@ export function PaymentMethodsManager({
           </Select>
           <p className="text-xs text-muted-foreground">
             Solo se mostrará en el talonario de esa rifa. Si borras la rifa, el
-            método se conserva para asignarlo a otra.
+            método se conserva para asignarlo a otra. Para usarlo en varias
+            rifas, usa <strong>Duplicar en esa rifa</strong> en un método
+            existente.
           </p>
         </div>
 
