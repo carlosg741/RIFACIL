@@ -8,7 +8,7 @@ import { BrandLogo } from "@/components/brand-logo";
 import { ButtonLink } from "@/components/button-link";
 import { Badge } from "@/components/ui/badge";
 import { getRaffleBySlug } from "@/lib/actions/public";
-import { formatMoney, raffleStatusLabel } from "@/lib/format";
+import { raffleStatusLabel } from "@/lib/format";
 
 export default async function RafflePage({
   params,
@@ -97,16 +97,12 @@ export default async function RafflePage({
             </p>
           )}
           <div className="flex flex-wrap gap-4 font-binance-num text-sm text-muted-foreground">
-            <span>
-              {currencyViews
-                .map((c) => formatMoney(c.pricePerTicket, c.code))
-                .join(" · ")}{" "}
-              / número
-            </span>
             {raffle.drawAt && (
               <span>
                 Sorteo:{" "}
-                {format(new Date(raffle.drawAt), "d MMM yyyy", { locale: es })}
+                {format(new Date(raffle.drawAt), "d MMM yyyy · HH:mm", {
+                  locale: es,
+                })}
               </span>
             )}
             {raffle.status === "drawn" && (

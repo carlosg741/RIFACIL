@@ -282,23 +282,37 @@ export function TicketGrid({
 
   return (
     <div className="relative space-y-6 pb-28">
-      {currencyList.length > 1 && (
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-sm text-muted-foreground">Pagar en:</span>
-          {currencyList.map((c) => (
-            <button
-              key={c.code}
-              type="button"
-              onClick={() => changeCurrency(c.code)}
-              className={`rounded-full border px-3 py-1.5 text-sm font-semibold transition ${
-                c.code === activeCurrency.code
-                  ? "border-primary bg-primary text-primary-foreground"
-                  : "border-border bg-card text-muted-foreground hover:border-primary/50"
-              }`}
-            >
-              {c.code} · {formatMoney(c.pricePerTicket, c.code)}
-            </button>
-          ))}
+      {currencyList.length > 0 && (
+        <div className="space-y-3">
+          <p className="text-sm uppercase tracking-wider text-primary">
+            Selecciona la moneda con la cual deseas pagar
+          </p>
+          {currencyList.length > 1 ? (
+            <div className="flex flex-wrap items-center gap-2">
+              {currencyList.map((c) => (
+                <button
+                  key={c.code}
+                  type="button"
+                  onClick={() => changeCurrency(c.code)}
+                  className={`rounded-full border px-3 py-1.5 text-sm font-semibold transition ${
+                    c.code === activeCurrency.code
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-border bg-card text-muted-foreground hover:border-primary/50"
+                  }`}
+                >
+                  {c.code} · {formatMoney(c.pricePerTicket, c.code)}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <p className="font-binance-num text-sm text-muted-foreground">
+              {formatMoney(
+                activeCurrency.pricePerTicket,
+                activeCurrency.code,
+              )}{" "}
+              / número
+            </p>
+          )}
         </div>
       )}
 
