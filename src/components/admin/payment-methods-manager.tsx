@@ -306,7 +306,8 @@ export function PaymentMethodsManager({
             </SelectContent>
           </Select>
           <p className="text-xs text-muted-foreground">
-            Solo se mostrará en el talonario de esa rifa (demo vs reales separados).
+            Solo se mostrará en el talonario de esa rifa. Si borras la rifa, el
+            método se conserva para asignarlo a otra.
           </p>
         </div>
 

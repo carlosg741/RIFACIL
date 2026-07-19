@@ -82,8 +82,10 @@ export const paymentMethods = pgTable(
     organizationId: text("organization_id")
       .notNull()
       .references(() => organizations.id, { onDelete: "cascade" }),
-    /** Rifa donde se muestra este método (evita mezclar demo vs reales) */
-    raffleId: text("raffle_id"),
+    /** Rifa donde se muestra este método (null = sin asignar; se conserva al borrar la rifa) */
+    raffleId: text("raffle_id").references(() => raffles.id, {
+      onDelete: "set null",
+    }),
     name: text("name").notNull(),
     instructions: text("instructions").notNull(),
     accountInfo: text("account_info"),

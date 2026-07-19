@@ -23,6 +23,7 @@ import {
 } from "@/db/schema";
 import { isDemoRaffleSlug, slugify } from "@/lib/format";
 import { releaseExpiredReservations } from "@/lib/tickets";
+import { deleteStoredFiles } from "@/lib/upload";
 import { parseLocalDateTime } from "@/lib/urls";
 
 const RESERVED_DEMO_SLUG = "demo";
@@ -988,7 +989,11 @@ export async function deleteRaffle(id: string) {
   const db = await getDb();
 
   const [current] = await db
-    .select({ id: raffles.id, slug: raffles.slug })
+    .select({
+      id: raffles.id,
+      slug: raffles.slug,
+      imageUrl: raffles.imageUrl,
+    })
     .from(raffles)
     .where(
       and(eq(raffles.id, id), eq(raffles.organizationId, user.organizationId)),
@@ -999,7 +1004,39 @@ export async function deleteRaffle(id: string) {
     return { ok: false as const, error: "Rifa no encontrada." };
   }
 
+  // Recolectar archivos de la rifa ANTES de borrar filas (cascada elimina proofs).
+  // No incluimos QR de métodos de pago: los métodos se conservan para otras rifas.
+  const [prizeRows, orderProofRows, donationRows] = await Promise.all([
+    db
+      .select({ imageUrl: rafflePrizes.imageUrl })
+      .from(rafflePrizes)
+      .where(eq(rafflePrizes.raffleId, id)),
+    db
+      .select({ fileUrl: paymentProofs.fileUrl })
+      .from(paymentProofs)
+      .innerJoin(orders, eq(paymentProofs.orderId, orders.id))
+      .where(eq(orders.raffleId, id)),
+    db
+      .select({ proofUrl: donations.proofUrl })
+      .from(donations)
+      .where(eq(donations.raffleId, id)),
+  ]);
+
+  const filesToDelete = [
+    current.imageUrl,
+    ...prizeRows.map((row) => row.imageUrl),
+    ...orderProofRows.map((row) => row.fileUrl),
+    ...donationRows.map((row) => row.proofUrl),
+  ];
+
+  // Desasignar métodos (no borrarlos) para poder reutilizarlos en otra rifa
+  await db
+    .update(paymentMethods)
+    .set({ raffleId: null })
+    .where(eq(paymentMethods.raffleId, id));
+
   await db.delete(raffles).where(eq(raffles.id, id));
+  await deleteStoredFiles(filesToDelete);
 
   revalidatePath("/admin");
   revalidatePath("/admin/rifas");

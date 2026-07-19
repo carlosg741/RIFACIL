@@ -1,5 +1,5 @@
-import { put } from "@vercel/blob";
-import { mkdir, writeFile } from "fs/promises";
+import { del, put } from "@vercel/blob";
+import { mkdir, unlink, writeFile } from "fs/promises";
 import path from "path";
 import { nanoid } from "nanoid";
 
@@ -95,4 +95,48 @@ export async function uploadProofFile(file: File) {
 
 export async function uploadRaffleImage(file: File) {
   return storeFile(file, "raffles", IMAGE_EXT, true);
+}
+
+function isVercelBlobUrl(url: string) {
+  try {
+    const host = new URL(url).hostname;
+    return (
+      host.endsWith(".blob.vercel-storage.com") ||
+      host === "blob.vercel-storage.com"
+    );
+  } catch {
+    return false;
+  }
+}
+
+/** Borra archivos propios (Blob o /uploads). Ignora URLs externas y fallos puntuales. */
+export async function deleteStoredFiles(
+  urls: Array<string | null | undefined>,
+) {
+  const unique = [
+    ...new Set(
+      urls
+        .filter((url): url is string => Boolean(url && url.trim()))
+        .map((url) => url.trim()),
+    ),
+  ];
+  if (unique.length === 0) return;
+
+  const blobUrls = unique.filter(isVercelBlobUrl);
+  if (blobUrls.length > 0 && process.env.BLOB_READ_WRITE_TOKEN) {
+    try {
+      await del(blobUrls, { token: process.env.BLOB_READ_WRITE_TOKEN });
+    } catch (err) {
+      console.error("[blob] delete failed", err);
+    }
+  }
+
+  for (const url of unique) {
+    if (!url.startsWith("/uploads/")) continue;
+    try {
+      await unlink(path.join(process.cwd(), "public", url));
+    } catch {
+      /* archivo ya ausente o sin permiso local */
+    }
+  }
 }

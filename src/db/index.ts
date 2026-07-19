@@ -148,7 +148,7 @@ CREATE INDEX IF NOT EXISTS raffle_currencies_raffle_idx
 CREATE TABLE IF NOT EXISTS payment_methods (
   id text PRIMARY KEY,
   organization_id text NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
-  raffle_id text REFERENCES raffles(id) ON DELETE CASCADE,
+  raffle_id text REFERENCES raffles(id) ON DELETE SET NULL,
   name text NOT NULL,
   instructions text NOT NULL,
   account_info text,
@@ -340,6 +340,17 @@ const MIGRATIONS = [
    WHERE NOT EXISTS (
      SELECT 1 FROM raffle_currencies rc WHERE rc.raffle_id = r.id
    )`,
+  // Conservar métodos de pago al borrar una rifa (solo desasignarlos)
+  `DO $$ BEGIN
+     ALTER TABLE payment_methods DROP CONSTRAINT IF EXISTS payment_methods_raffle_id_fkey;
+   EXCEPTION WHEN undefined_object THEN NULL;
+   END $$`,
+  `DO $$ BEGIN
+     ALTER TABLE payment_methods
+       ADD CONSTRAINT payment_methods_raffle_id_fkey
+       FOREIGN KEY (raffle_id) REFERENCES raffles(id) ON DELETE SET NULL;
+   EXCEPTION WHEN duplicate_object THEN NULL;
+   END $$`,
 ];
 
 async function applyMigrations() {
