@@ -1220,7 +1220,10 @@ function secureShuffle<T>(arr: T[]): T[] {
   return a;
 }
 
-export async function runDraw(raffleId: string) {
+export async function runDraw(
+  raffleId: string,
+  options?: { forceEarly?: boolean },
+) {
   const user = await requireAdmin();
   await ensureSchema();
   const db = await getDb();
@@ -1239,6 +1242,14 @@ export async function runDraw(raffleId: string) {
   if (!raffle) return { ok: false as const, error: "Rifa no encontrada." };
   if (raffle.status === "drawn") {
     return { ok: false as const, error: "Esta rifa ya fue sorteada." };
+  }
+
+  if (raffle.drawAt && new Date() < new Date(raffle.drawAt) && !options?.forceEarly) {
+    return {
+      ok: false as const,
+      error:
+        "Aún no llega la fecha y hora programadas del sorteo. Si quieres adelantarlo, confirma “sortear antes de la fecha”.",
+    };
   }
 
   const paid = await db
@@ -1263,13 +1274,17 @@ export async function runDraw(raffleId: string) {
   const shuffled = secureShuffle(paid);
   const winners = shuffled.slice(0, winnerCount);
   const drawId = nanoid();
+  const earlyNote =
+    raffle.drawAt && new Date() < new Date(raffle.drawAt) && options?.forceEarly
+      ? " Adelantado antes de la fecha programada."
+      : "";
 
   await db.insert(draws).values({
     id: drawId,
     raffleId,
     seed,
     paidTicketCount: paid.length,
-    notes: `Sorteo con ${winnerCount} ganador(es) de ${paid.length} boletos pagados.`,
+    notes: `Sorteo con ${winnerCount} ganador(es) de ${paid.length} boletos pagados.${earlyNote}`,
   });
 
   await db.insert(drawWinners).values(

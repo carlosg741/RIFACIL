@@ -67,7 +67,8 @@ export default async function AdminRaffleDetailPage({
             <DrawButton
               raffleId={raffle.id}
               slug={raffle.slug}
-              disabled={stats.paid === 0}
+              drawAt={raffle.drawAt}
+              hasPaidTickets={stats.paid > 0}
             />
           )}
           <DeleteRaffleButton raffleId={raffle.id} title={raffle.title} />
