@@ -377,6 +377,10 @@ async function applyMigrations() {
 }
 
 export async function ensureSchema() {
+  // Ejecuta schema base + migraciones UNA sola vez por instancia del servidor.
+  // Antes las migraciones (decenas de sentencias) corrían en cada llamada, lo
+  // que hacía muy lento el panel: cada página abría decenas de round-trips a la
+  // base de datos. Cachear en un único promise evita esa latencia.
   if (!globalThis.__rifacilSchemaReady) {
     globalThis.__rifacilSchemaReady = (async () => {
       const url = getDatabaseUrl();
@@ -389,15 +393,21 @@ export async function ensureSchema() {
         for (const statement of parts) {
           await client.query(statement);
         }
-        return;
+      } else {
+        const client = await getPglite();
+        await client.exec(SCHEMA_SQL);
       }
-      const client = await getPglite();
-      await client.exec(SCHEMA_SQL);
+      // Añade columnas/índices nuevos sin borrar datos existentes
+      await applyMigrations();
     })();
   }
-  await globalThis.__rifacilSchemaReady;
-  // Siempre: añade columnas nuevas sin borrar datos existentes
-  await applyMigrations();
+  try {
+    await globalThis.__rifacilSchemaReady;
+  } catch (err) {
+    // Si falló, permite reintentar en la próxima llamada
+    globalThis.__rifacilSchemaReady = undefined;
+    throw err;
+  }
 }
 
 /** Separa SQL en statements, respetando bloques DO $$ … $$. */
