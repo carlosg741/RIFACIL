@@ -92,7 +92,9 @@ export default async function RafflePage({
             </div>
           ) : null}
           {raffle.description && (
-            <p className="max-w-2xl text-muted-foreground">{raffle.description}</p>
+            <p className="max-w-2xl whitespace-pre-line text-muted-foreground leading-relaxed">
+              {raffle.description}
+            </p>
           )}
           <div className="flex flex-wrap gap-4 font-binance-num text-sm text-muted-foreground">
             <span>

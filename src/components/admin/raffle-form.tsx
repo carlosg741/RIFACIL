@@ -323,8 +323,12 @@ export function RaffleForm({
           id="description"
           name="description"
           defaultValue={raffle?.description || ""}
-          rows={3}
+          rows={6}
         />
+        <p className="text-xs text-muted-foreground">
+          Los saltos de línea y espacios entre párrafos se respetan en la página
+          pública.
+        </p>
       </div>
       <div className="space-y-3 rounded-xl border border-primary/30 bg-secondary/30 p-4">
         <div>

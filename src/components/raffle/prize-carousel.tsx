@@ -70,7 +70,7 @@ export function PrizeCarousel({ prizes }: { prizes: Prize[] }) {
                   {prize.title}
                 </h2>
                 {prize.description ? (
-                  <p className="mt-2 text-sm text-muted-foreground">
+                  <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
                     {prize.description}
                   </p>
                 ) : null}

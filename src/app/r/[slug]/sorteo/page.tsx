@@ -71,7 +71,7 @@ export default async function DrawPublicPage({
                       {w.prizeTitle || raffle.prize}
                     </p>
                     {w.prizeDescription ? (
-                      <p className="mt-1 text-sm text-muted-foreground">
+                      <p className="mt-1 whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
                         {w.prizeDescription}
                       </p>
                     ) : null}
