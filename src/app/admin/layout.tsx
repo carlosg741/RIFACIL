@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { MessageCircle } from "lucide-react";
 import { auth, signOut } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
+import { AdminNav } from "@/components/admin/admin-nav";
 import {
   CONTACT_WHATSAPP,
   ORGANIZER_SUPPORT_MESSAGE,
@@ -35,10 +36,7 @@ export default async function AdminLayout({
   }
   const isSuperAdmin = session?.user?.role === "super_admin";
   const links = isSuperAdmin
-    ? [
-        ...baseLinks,
-        { href: "/admin/clientes", label: "Clientes" },
-      ]
+    ? [...baseLinks, { href: "/admin/clientes", label: "Clientes" }]
     : baseLinks;
 
   const supportUrl = contactWhatsAppUrl(ORGANIZER_SUPPORT_MESSAGE);
@@ -66,26 +64,7 @@ export default async function AdminLayout({
             ) : null}
           </p>
         </div>
-        <nav className="flex gap-1 overflow-x-auto px-2 pb-3 md:flex-col md:pb-4">
-          {links.map((l) => (
-            <Link
-              key={l.href}
-              href={l.href}
-              className="whitespace-nowrap rounded-lg px-3 py-2 text-sm hover:bg-sidebar-accent"
-            >
-              {l.label}
-            </Link>
-          ))}
-          <a
-            href={supportUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 whitespace-nowrap rounded-lg px-3 py-2 text-sm text-primary hover:bg-sidebar-accent"
-          >
-            <MessageCircle className="size-4 shrink-0" />
-            Soporte
-          </a>
-        </nav>
+        <AdminNav links={links} supportUrl={supportUrl} />
         <div className="mx-2 mb-4 hidden rounded-xl border border-primary/25 bg-sidebar-accent/40 p-3 md:block">
           <p className="text-xs font-medium text-primary">¿Necesitas ayuda?</p>
           <p className="mt-1 text-xs text-sidebar-foreground/70">

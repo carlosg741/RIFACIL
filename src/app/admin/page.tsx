@@ -5,6 +5,8 @@ import { ButtonLink } from "@/components/button-link";
 import { formatMoney, orderStatusLabel, raffleStatusLabel } from "@/lib/format";
 import { ReleaseExpiredButton } from "@/components/admin/release-expired-button";
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminDashboardPage() {
   const data = await getAdminDashboard();
 
@@ -25,13 +27,26 @@ export default async function AdminDashboardPage() {
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Stat label="Eventos" value={String(data.raffles.length)} />
         <Stat
           label="Órdenes en revisión"
           value={String(data.pendingOrders.length)}
         />
-        <Stat label="Boletos pagados" value={String(data.paidTickets)} />
+        <Stat
+          label="Boletos pagados"
+          value={String(data.paidTickets)}
+          hint="Solo rifas con sorteo"
+        />
+        <Stat
+          label="Donaciones confirmadas"
+          value={String(data.confirmedDonations)}
+          hint={
+            data.pendingDonations > 0
+              ? `${data.pendingDonations} en revisión`
+              : "Contribuciones / donaciones"
+          }
+        />
       </div>
 
       <section className="space-y-3">
@@ -51,7 +66,7 @@ export default async function AdminDashboardPage() {
               <thead className="border-b bg-muted/40 text-left">
                 <tr>
                   <th className="p-3">Participante</th>
-                  <th className="p-3">Rifa</th>
+                  <th className="p-3">Evento</th>
                   <th className="p-3">Monto</th>
                   <th className="p-3">Estado</th>
                 </tr>
@@ -59,35 +74,35 @@ export default async function AdminDashboardPage() {
               <tbody>
                 {data.pendingOrders.map(
                   ({ order, raffleTitle, raffleSlug, raffleCurrency }) => (
-                  <tr key={order.id} className="border-b last:border-0">
-                    <td className="p-3">
-                      <Link
-                        href={`/admin/ordenes?highlight=${order.id}`}
-                        className="font-medium underline"
-                      >
-                        {order.participantName}
-                      </Link>
-                      <div className="text-xs text-muted-foreground">
-                        {order.participantPhone}
-                      </div>
-                    </td>
-                    <td className="p-3">
-                      <Link href={`/r/${raffleSlug}`} className="underline">
-                        {raffleTitle}
-                      </Link>
-                    </td>
-                    <td className="p-3">
-                      {formatMoney(
-                        order.totalAmount,
-                        order.currency || raffleCurrency,
-                      )}
-                    </td>
-                    <td className="p-3">
-                      <Badge variant="secondary">
-                        {orderStatusLabel[order.status]}
-                      </Badge>
-                    </td>
-                  </tr>
+                    <tr key={order.id} className="border-b last:border-0">
+                      <td className="p-3">
+                        <Link
+                          href={`/admin/ordenes?highlight=${order.id}`}
+                          className="font-medium underline"
+                        >
+                          {order.participantName}
+                        </Link>
+                        <div className="text-xs text-muted-foreground">
+                          {order.participantPhone}
+                        </div>
+                      </td>
+                      <td className="p-3">
+                        <Link href={`/r/${raffleSlug}`} className="underline">
+                          {raffleTitle}
+                        </Link>
+                      </td>
+                      <td className="p-3">
+                        {formatMoney(
+                          order.totalAmount,
+                          order.currency || raffleCurrency,
+                        )}
+                      </td>
+                      <td className="p-3">
+                        <Badge variant="secondary">
+                          {orderStatusLabel[order.status]}
+                        </Badge>
+                      </td>
+                    </tr>
                   ),
                 )}
               </tbody>
@@ -109,12 +124,31 @@ export default async function AdminDashboardPage() {
                 <h3 className="font-[family-name:var(--font-display)] text-lg">
                   {r.title}
                 </h3>
-                <Badge variant="outline">{raffleStatusLabel[r.status]}</Badge>
+                <div className="flex flex-wrap justify-end gap-1">
+                  {r.type === "collection" ? (
+                    <Badge variant="secondary">Contribución</Badge>
+                  ) : null}
+                  <Badge variant="outline">{raffleStatusLabel[r.status]}</Badge>
+                </div>
               </div>
-              <p className="mt-1 text-sm text-muted-foreground">{r.prize}</p>
-              <p className="mt-3 text-xs text-muted-foreground">
-                /r/{r.slug} · {formatMoney(r.pricePerTicket, r.currency)}
-              </p>
+              {r.type === "collection" ? (
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Solo contribuciones / donaciones
+                  {r.goalAmount
+                    ? ` · Meta ${formatMoney(r.goalAmount, r.currency)}`
+                    : ""}
+                </p>
+              ) : (
+                <>
+                  <p className="mt-1 text-sm text-muted-foreground">{r.prize}</p>
+                  <p className="mt-3 text-xs text-muted-foreground">
+                    /r/{r.slug} · {formatMoney(r.pricePerTicket, r.currency)}
+                  </p>
+                </>
+              )}
+              {r.type === "collection" ? (
+                <p className="mt-3 text-xs text-muted-foreground">/r/{r.slug}</p>
+              ) : null}
             </Link>
           ))}
         </div>
@@ -123,13 +157,24 @@ export default async function AdminDashboardPage() {
   );
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+function Stat({
+  label,
+  value,
+  hint,
+}: {
+  label: string;
+  value: string;
+  hint?: string;
+}) {
   return (
     <div className="rounded-xl border bg-card p-5">
       <p className="text-sm text-muted-foreground">{label}</p>
       <p className="mt-1 font-[family-name:var(--font-display)] text-3xl text-primary">
         {value}
       </p>
+      {hint ? (
+        <p className="mt-1 text-xs text-muted-foreground">{hint}</p>
+      ) : null}
     </div>
   );
 }

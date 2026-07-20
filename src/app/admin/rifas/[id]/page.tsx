@@ -40,7 +40,7 @@ export default async function AdminRaffleDetailPage({
               {raffle.title}
             </h1>
             <Badge>{raffleStatusLabel[raffle.status]}</Badge>
-            {isCollection && <Badge variant="secondary">Recolecta</Badge>}
+            {isCollection && <Badge variant="secondary">Contribución</Badge>}
           </div>
           <p className="text-muted-foreground">
             <Link href={`/r/${raffle.slug}`} className="underline">
@@ -94,8 +94,9 @@ export default async function AdminRaffleDetailPage({
 
       {isCollection ? (
         <p className="rounded-xl border border-primary/30 bg-secondary/40 px-4 py-3 text-sm text-muted-foreground">
-          Esta es una <span className="text-primary">recolecta</span>: solo
-          recibe donaciones, sin números ni sorteo. Revisa los aportes en{" "}
+          Esta es una{" "}
+          <span className="text-primary">contribución / donación</span>: solo
+          recibe aportes, sin números ni sorteo. Revisa los aportes en{" "}
           <Link href="/admin/donaciones" className="underline">
             Donaciones
           </Link>

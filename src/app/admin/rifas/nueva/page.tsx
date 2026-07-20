@@ -8,7 +8,7 @@ export default function NewRafflePage() {
           Nuevo evento
         </h1>
         <p className="text-muted-foreground">
-          Elige el tipo de evento (rifa con sorteo o colecta / donación) y
+          Elige el tipo de evento (rifa con sorteo o contribución / donación) y
           publícalo cuando esté listo
         </p>
       </div>

@@ -167,6 +167,7 @@ export async function getAdminDashboard() {
     .orderBy(desc(orders.createdAt))
     .limit(20);
 
+  // Solo boletos de rifas con sorteo (no contribuciones/donaciones).
   const [paidCount] = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(tickets)
@@ -175,6 +176,31 @@ export async function getAdminDashboard() {
       and(
         eq(raffles.organizationId, user.organizationId),
         eq(tickets.status, "paid"),
+        ne(raffles.type, "collection"),
+      ),
+    );
+
+  // Contribuciones / donaciones confirmadas.
+  const [donationCount] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(donations)
+    .innerJoin(raffles, eq(donations.raffleId, raffles.id))
+    .where(
+      and(
+        eq(raffles.organizationId, user.organizationId),
+        eq(donations.status, "confirmed"),
+      ),
+    );
+
+  // Donaciones pendientes de revisar (en revisión).
+  const [pendingDonationsCount] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(donations)
+    .innerJoin(raffles, eq(donations.raffleId, raffles.id))
+    .where(
+      and(
+        eq(raffles.organizationId, user.organizationId),
+        eq(donations.status, "under_review"),
       ),
     );
 
@@ -182,6 +208,8 @@ export async function getAdminDashboard() {
     raffles: orgRaffles,
     pendingOrders,
     paidTickets: Number(paidCount?.count ?? 0),
+    confirmedDonations: Number(donationCount?.count ?? 0),
+    pendingDonations: Number(pendingDonationsCount?.count ?? 0),
   };
 }
 
@@ -884,7 +912,9 @@ export async function confirmDonation(donationId: string) {
     .set({ status: "confirmed", reviewedAt: now, updatedAt: now })
     .where(eq(donations.id, donationId));
 
+  revalidatePath("/admin");
   revalidatePath("/admin/donaciones");
+  revalidatePath(`/r/${row.raffle.slug}`);
   revalidatePath(`/r/${row.raffle.slug}/donacion/${donationId}`);
   return { ok: true as const };
 }
@@ -914,7 +944,9 @@ export async function rejectDonation(donationId: string) {
     .set({ status: "rejected", reviewedAt: now, updatedAt: now })
     .where(eq(donations.id, donationId));
 
+  revalidatePath("/admin");
   revalidatePath("/admin/donaciones");
+  revalidatePath(`/r/${row.raffle.slug}`);
   revalidatePath(`/r/${row.raffle.slug}/donacion/${donationId}`);
   return { ok: true as const };
 }
@@ -1499,7 +1531,7 @@ export async function runDraw(
   if (raffle.type === "collection") {
     return {
       ok: false as const,
-      error: "Una recolecta no tiene sorteo.",
+      error: "Una contribución / donación no tiene sorteo.",
     };
   }
   if (raffle.status === "drawn") {

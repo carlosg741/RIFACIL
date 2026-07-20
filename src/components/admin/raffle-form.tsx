@@ -311,7 +311,9 @@ export function RaffleForm({
         const res = await updateRaffle(raffle.id, payload);
         if (!res.ok) toast.error(res.error);
         else {
-          toast.success(isCollection ? "Recolecta actualizada" : "Rifa actualizada");
+          toast.success(
+            isCollection ? "Contribución actualizada" : "Rifa actualizada",
+          );
           router.refresh();
         }
       } else {
@@ -320,7 +322,7 @@ export function RaffleForm({
         else {
           toast.success(
             isCollection
-              ? "Recolecta creada · copia el link y QR para compartir"
+              ? "Contribución creada · copia el link y QR para compartir"
               : "Rifa creada · copia el link y QR para compartir",
           );
           router.push(`/admin/rifas/${res.id}`);
@@ -377,7 +379,7 @@ export function RaffleForm({
             }`}
           >
             <span className="block font-semibold text-primary">
-              Recolecta / Donación
+              Contribución / Donación
             </span>
             <span className="mt-1 block text-xs text-muted-foreground">
               Solo aportes, sin números ni sorteo.
@@ -577,7 +579,7 @@ export function RaffleForm({
             required
           />
           <p className="text-xs text-muted-foreground">
-            Al convertir la recolecta en rifa se generarán estos números.
+            Al convertir la contribución en rifa se generarán estos números.
           </p>
         </div>
       )}
@@ -901,7 +903,7 @@ export function RaffleForm({
           : isEdit
             ? "Guardar cambios"
             : isCollection
-              ? "Crear recolecta"
+              ? "Crear contribución"
               : "Crear rifa"}
       </Button>
     </form>

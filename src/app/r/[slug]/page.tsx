@@ -41,7 +41,7 @@ export default async function RafflePage({
               Inicio
             </ButtonLink>
           </div>
-          <Badge variant="secondary">Recolecta</Badge>
+          <Badge variant="secondary">Contribución</Badge>
         </header>
 
         <main className="mx-auto max-w-3xl space-y-8 px-4 pb-24">
@@ -97,12 +97,12 @@ export default async function RafflePage({
               />
             ) : (
               <div className="rounded-2xl border bg-card p-8 text-center text-muted-foreground">
-                Esta recolecta aún no tiene métodos de pago configurados.
+                Esta contribución aún no tiene métodos de pago configurados.
               </div>
             )
           ) : (
             <div className="rounded-2xl border bg-card p-8 text-center text-muted-foreground">
-              Esta recolecta no está recibiendo aportes en este momento.
+              Esta contribución no está recibiendo aportes en este momento.
             </div>
           )}
         </main>

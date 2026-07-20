@@ -20,7 +20,7 @@ export default async function AdminRafflesPage() {
             Eventos
           </h1>
           <p className="text-muted-foreground">
-            Crea, edita o elimina tus rifas y colectas
+            Crea, edita o elimina tus rifas y contribuciones
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -50,7 +50,7 @@ export default async function AdminRafflesPage() {
                 </Link>
                 <Badge variant="outline">{raffleStatusLabel[r.status]}</Badge>
                 {r.type === "collection" ? (
-                  <Badge variant="secondary">Recolecta</Badge>
+                  <Badge variant="secondary">Contribución</Badge>
                 ) : null}
                 {isDemoRaffleSlug(r.slug) ? (
                   <Badge variant="secondary">Demo</Badge>
@@ -59,7 +59,7 @@ export default async function AdminRafflesPage() {
               <p className="text-sm text-muted-foreground">
                 /r/{r.slug}
                 {r.type === "collection"
-                  ? " · Solo donaciones"
+                  ? " · Solo contribuciones / donaciones"
                   : ` · ${r.totalTickets} números · ${formatMoney(
                       r.pricePerTicket,
                       r.currency,
