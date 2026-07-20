@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 
 const baseLinks = [
   { href: "/admin", label: "Dashboard" },
-  { href: "/admin/rifas", label: "Rifas" },
+  { href: "/admin/rifas", label: "Eventos" },
   { href: "/admin/ordenes", label: "Órdenes" },
   { href: "/admin/donaciones", label: "Donaciones" },
   { href: "/admin/metodos-pago", label: "Métodos de pago" },

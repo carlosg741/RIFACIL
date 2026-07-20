@@ -17,20 +17,22 @@ export default async function AdminRafflesPage() {
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="font-[family-name:var(--font-display)] text-3xl text-primary">
-            Rifas
+            Eventos
           </h1>
-          <p className="text-muted-foreground">Crea, edita o elimina tus talonarios</p>
+          <p className="text-muted-foreground">
+            Crea, edita o elimina tus rifas y colectas
+          </p>
         </div>
         <div className="flex flex-wrap gap-2">
           {isSuperAdmin ? <CreateDemoRaffleButton /> : null}
-          <ButtonLink href="/admin/rifas/nueva">Nueva rifa</ButtonLink>
+          <ButtonLink href="/admin/rifas/nueva">Nuevo evento</ButtonLink>
         </div>
       </div>
 
       <div className="space-y-3">
         {rows.length === 0 && (
           <p className="rounded-xl border bg-card p-4 text-sm text-muted-foreground">
-            Aún no tienes rifas. Crea la primera.
+            Aún no tienes eventos. Crea el primero.
           </p>
         )}
         {rows.map((r) => (

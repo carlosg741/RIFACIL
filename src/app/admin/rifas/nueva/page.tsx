@@ -5,10 +5,11 @@ export default function NewRafflePage() {
     <div className="space-y-6">
       <div>
         <h1 className="font-[family-name:var(--font-display)] text-3xl text-primary">
-          Nueva rifa
+          Nuevo evento
         </h1>
         <p className="text-muted-foreground">
-          Configura el talonario y publícalo cuando esté listo
+          Elige el tipo de evento (rifa con sorteo o colecta / donación) y
+          publícalo cuando esté listo
         </p>
       </div>
       <RaffleForm />

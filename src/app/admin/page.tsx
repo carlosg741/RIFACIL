@@ -16,17 +16,17 @@ export default async function AdminDashboardPage() {
             Dashboard
           </h1>
           <p className="text-muted-foreground">
-            Resumen de tus rifas y pagos pendientes
+            Resumen de tus eventos y pagos pendientes
           </p>
         </div>
         <div className="flex gap-2">
           <ReleaseExpiredButton />
-          <ButtonLink href="/admin/rifas/nueva">Nueva rifa</ButtonLink>
+          <ButtonLink href="/admin/rifas/nueva">Nuevo evento</ButtonLink>
         </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <Stat label="Rifas" value={String(data.raffles.length)} />
+        <Stat label="Eventos" value={String(data.raffles.length)} />
         <Stat
           label="Órdenes en revisión"
           value={String(data.pendingOrders.length)}
@@ -97,7 +97,7 @@ export default async function AdminDashboardPage() {
       </section>
 
       <section className="space-y-3">
-        <h2 className="font-semibold text-primary">Tus rifas</h2>
+        <h2 className="font-semibold text-primary">Tus eventos</h2>
         <div className="grid gap-3 md:grid-cols-2">
           {data.raffles.map((r) => (
             <Link
