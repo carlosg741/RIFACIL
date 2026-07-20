@@ -47,7 +47,7 @@ export function RaffleSharePanel({
   return (
     <div className="rounded-xl border border-primary/30 bg-card p-5">
       <h2 className="font-[family-name:var(--font-display)] text-xl font-semibold text-primary">
-        Comparte tu talonario
+        Comparte tu evento
       </h2>
       <p className="mt-1 text-sm text-muted-foreground">
         Envía este link o el QR a tus participantes para que elijan números.
@@ -91,7 +91,7 @@ export function RaffleSharePanel({
               variant="outline"
               onClick={() => window.open(url, "_blank")}
             >
-              Abrir talonario
+              Abrir página pública
             </Button>
           </div>
         </div>

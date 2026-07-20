@@ -187,7 +187,7 @@ export function RaffleForm({
     try {
       const url = await uploadImage(file);
       setCoverImageUrl(url);
-      toast.success("Imagen de la rifa cargada");
+      toast.success("Imagen del evento cargada");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Error al subir la imagen");
     } finally {
@@ -659,7 +659,7 @@ export function RaffleForm({
 
       <div className="space-y-3 rounded-xl border border-primary/30 bg-secondary/30 p-4">
         <div>
-          <Label>Imagen de la rifa</Label>
+          <Label>Imagen del evento</Label>
           <p className="mt-1 text-xs text-muted-foreground">
             Identifica la causa: foto de una persona, logo de una marca o
             imagen de la institución. Es aparte de los premios.
@@ -671,7 +671,7 @@ export function RaffleForm({
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={coverImageUrl}
-              alt="Vista previa de la imagen de la rifa"
+              alt="Vista previa de la imagen del evento"
               className="max-h-60 max-w-full rounded-md object-contain"
             />
             <Button
