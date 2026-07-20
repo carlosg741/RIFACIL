@@ -27,11 +27,11 @@ export const metadata: Metadata = {
     process.env.NEXT_PUBLIC_APP_URL || "https://rifacil-rifas.vercel.app",
   ),
   title: {
-    default: "Rifacil — Talonario digital para rifas",
+    default: "Rifacil — Rifas y contribuciones digitales",
     template: "%s · Rifacil",
   },
   description:
-    "Crea rifas, gestiona boletos, recibe comprobantes de pago y sortea ganadores con transparencia.",
+    "Organiza rifas con sorteo o eventos de contribución y donación: link y QR, comprobantes de pago, tickets digitales y panel para el organizador.",
   icons: {
     icon: [{ url: "/rifacil-icon.png", type: "image/png" }],
     shortcut: "/rifacil-icon.png",
@@ -42,24 +42,24 @@ export const metadata: Metadata = {
     locale: "es_PE",
     url: "/",
     siteName: "Rifacil",
-    title: "Rifacil — Talonario digital para rifas",
+    title: "Rifacil — Rifas y contribuciones digitales",
     description:
-      "Crea rifas, gestiona boletos, recibe comprobantes de pago y sortea ganadores con transparencia.",
+      "Organiza rifas con sorteo o eventos de contribución y donación: link y QR, comprobantes de pago, tickets digitales y panel para el organizador.",
     images: [
       {
-        url: "/rifacil-og.png",
+        url: "/rifacil-og.png?v=2",
         width: 1200,
         height: 630,
-        alt: "Rifacil",
+        alt: "Rifacil — Rifas y contribuciones digitales",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Rifacil — Talonario digital para rifas",
+    title: "Rifacil — Rifas y contribuciones digitales",
     description:
-      "Crea rifas, gestiona boletos, recibe comprobantes de pago y sortea ganadores con transparencia.",
-    images: ["/rifacil-og.png"],
+      "Organiza rifas con sorteo o eventos de contribución y donación: link y QR, comprobantes de pago, tickets digitales y panel para el organizador.",
+    images: ["/rifacil-og.png?v=2"],
   },
 };
 

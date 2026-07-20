@@ -15,10 +15,11 @@ import { WhatsAppFloat } from "@/components/whatsapp-float";
 export const dynamic = "force-dynamic";
 
 const LANDING_BENEFITS = [
-  "Talonario digital con números en vivo",
-  "Recibe comprobantes y aprueba pagos",
-  "Varios premios con fotos",
-  "Sorteo con ticket digital para cada participante",
+  "Rifas con sorteo: talonario digital y números en vivo",
+  "Contribuciones y donaciones: recolectas sin números ni sorteo",
+  "Recibe comprobantes y aprueba pagos desde el panel",
+  "Varios premios con fotos (en rifas) y meta opcional (en contribuciones)",
+  "Ticket digital y link/QR para compartir por WhatsApp",
 ] as const;
 
 export default async function HomePage() {
@@ -70,11 +71,12 @@ export default async function HomePage() {
               Rifacil
             </p>
             <h1 className="animate-fade-up mt-4 max-w-2xl text-2xl font-medium leading-snug text-foreground sm:text-3xl [animation-delay:80ms]">
-              Talonario digital para organizar rifas de principio a fin
+              Eventos digitales: rifas con sorteo y contribuciones / donaciones
             </h1>
             <p className="animate-fade-up mt-4 max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg [animation-delay:140ms]">
-              Comparte link y QR, aparta números, cobra con tus propios métodos
-              de pago, valida comprobantes y sortea con transparencia.
+              Comparte link y QR, cobra con tus propios métodos de pago, valida
+              comprobantes y organiza rifas o campañas de aporte — todo desde
+              un solo panel.
             </p>
             <div className="animate-fade-up mt-8 flex flex-wrap gap-3 [animation-delay:200ms]">
               <ButtonLink
@@ -94,7 +96,7 @@ export default async function HomePage() {
 
             <div className="animate-fade-up mt-14 max-w-2xl border-t border-primary/20 pt-10 [animation-delay:280ms]">
               <p className="font-[family-name:var(--font-display)] text-2xl font-semibold leading-snug text-foreground sm:text-3xl">
-                Organiza tu rifa{" "}
+                Organiza tu evento{" "}
                 <span className="text-primary">
                   fácil, transparente y desde el celular, computadora o
                   tablets.
@@ -125,22 +127,23 @@ export default async function HomePage() {
               Todo el proceso en un solo lugar
             </h2>
             <p className="mt-2 max-w-2xl text-muted-foreground">
-              Como Rifary: link del talonario, comprobantes manuales y ticket
-              digital para WhatsApp.
+              Elige el tipo de evento: rifa con números y sorteo, o contribución
+              / donación solo con aportes. Link, QR, comprobantes y seguimiento
+              en el mismo panel.
             </p>
             <div className="mt-12 grid gap-10 md:grid-cols-3">
               {[
                 {
-                  title: "Link + QR",
-                  body: "Al crear la rifa generas un enlace y QR para enviar a tus participantes.",
+                  title: "Rifa con sorteo",
+                  body: "Talonario digital, apartados, premios con fotos, ticket digital y sorteo transparente.",
                 },
                 {
-                  title: "Pago con comprobante",
-                  body: "Muestras Yape, Plin o transferencia y el participante adjunta la captura.",
+                  title: "Contribución / Donación",
+                  body: "Página de aportes sin números: monto libre, meta opcional con barra de progreso y comprobantes.",
                 },
                 {
-                  title: "Ticket digital",
-                  body: "Descárgalo o envíalo por WhatsApp desde el admin. No depende del correo.",
+                  title: "Link + QR + panel",
+                  body: "Comparte el evento, recibe pagos con tus métodos y aprueba todo desde el panel organizador.",
                 },
               ].map((item) => (
                 <div key={item.title}>
@@ -166,7 +169,7 @@ export default async function HomePage() {
             </h2>
             <p className="mt-2 max-w-2xl text-muted-foreground">
               Escríbenos por correo o WhatsApp y te activamos tu cuenta para
-              crear y administrar tus propias rifas.
+              crear y administrar rifas y eventos de contribución / donación.
             </p>
             <div className="mt-10 flex flex-col gap-4 sm:flex-row sm:flex-wrap">
               <a
