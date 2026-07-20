@@ -256,17 +256,20 @@ export function RaffleForm({
 
     const normalizedCurrencies = currencies.map((item) => ({
       code: item.code.trim().toUpperCase(),
-      pricePerTicket: Number(item.price),
+      // En recolecta no hay precio por número; el monto lo elige el donante.
+      pricePerTicket: isCollection ? 1 : Number(item.price),
     }));
+    if (normalizedCurrencies.some((item) => item.code.length < 2)) {
+      toast.error("Cada moneda necesita un código válido.");
+      return;
+    }
     if (
+      !isCollection &&
       normalizedCurrencies.some(
-        (item) =>
-          item.code.length < 2 ||
-          !item.pricePerTicket ||
-          item.pricePerTicket <= 0,
+        (item) => !item.pricePerTicket || item.pricePerTicket <= 0,
       )
     ) {
-      toast.error("Cada moneda necesita un código y un precio mayor a 0.");
+      toast.error("Cada moneda necesita un precio mayor a 0.");
       return;
     }
     const codes = normalizedCurrencies.map((item) => item.code);
@@ -423,10 +426,11 @@ export function RaffleForm({
       )}
       <div className="space-y-3 rounded-xl border border-primary/30 bg-secondary/30 p-4">
         <div>
-          <Label>Monedas y precios</Label>
+          <Label>{isCollection ? "Monedas aceptadas" : "Monedas y precios"}</Label>
           <p className="mt-1 text-xs text-muted-foreground">
-            Agrega las monedas en las que se puede pagar la rifa, cada una con
-            su precio por número. La primera es la moneda principal.
+            {isCollection
+              ? "Monedas en las que se puede donar. El monto lo elige cada donante. La primera es la moneda principal (se usa para la meta)."
+              : "Agrega las monedas en las que se puede pagar la rifa, cada una con su precio por número. La primera es la moneda principal."}
           </p>
         </div>
 
@@ -464,7 +468,11 @@ export function RaffleForm({
                 </Button>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div
+              className={
+                isCollection ? "grid grid-cols-1 gap-3" : "grid grid-cols-2 gap-3"
+              }
+            >
               <div className="space-y-1">
                 <Label htmlFor={`currency-code-${index}`}>Moneda</Label>
                 <Select
@@ -489,22 +497,24 @@ export function RaffleForm({
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-1">
-                <Label htmlFor={`currency-price-${index}`}>
-                  Precio / número
-                </Label>
-                <Input
-                  id={`currency-price-${index}`}
-                  type="number"
-                  step="0.01"
-                  min="0.01"
-                  value={item.price}
-                  onChange={(event) =>
-                    updateCurrency(index, { price: event.target.value })
-                  }
-                  required
-                />
-              </div>
+              {!isCollection && (
+                <div className="space-y-1">
+                  <Label htmlFor={`currency-price-${index}`}>
+                    Precio / número
+                  </Label>
+                  <Input
+                    id={`currency-price-${index}`}
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    value={item.price}
+                    onChange={(event) =>
+                      updateCurrency(index, { price: event.target.value })
+                    }
+                    required
+                  />
+                </div>
+              )}
             </div>
           </div>
         ))}
