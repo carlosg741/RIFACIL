@@ -118,6 +118,8 @@ export const raffles = pgTable(
     description: text("description"),
     prize: text("prize").notNull(),
     imageUrl: text("image_url"),
+    /** Tipo de página: "raffle" (rifa con sorteo) o "collection" (recolecta/donación) */
+    type: text("type").notNull().default("raffle"),
     pricePerTicket: numeric("price_per_ticket", {
       precision: 12,
       scale: 2,
@@ -129,6 +131,8 @@ export const raffles = pgTable(
     status: raffleStatusEnum("status").notNull().default("draft"),
     winnerCount: integer("winner_count").notNull().default(1),
     donationsEnabled: boolean("donations_enabled").notNull().default(false),
+    /** Meta de recaudación opcional (solo recolectas); null = sin meta */
+    goalAmount: numeric("goal_amount", { precision: 12, scale: 2 }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),

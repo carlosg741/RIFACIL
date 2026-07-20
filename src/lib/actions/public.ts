@@ -1,6 +1,6 @@
 "use server";
 
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { nanoid } from "nanoid";
 import { z } from "zod";
@@ -89,12 +89,38 @@ export async function getRaffleBySlug(slug: string) {
         },
       ];
 
+  // Para recolectas: total confirmado por moneda (para la barra de progreso).
+  const collectedRows =
+    raffle.type === "collection"
+      ? await db
+          .select({
+            currency: donations.currency,
+            total: sql<string>`coalesce(sum(${donations.amount}), 0)`,
+          })
+          .from(donations)
+          .where(
+            and(
+              eq(donations.raffleId, raffle.id),
+              eq(donations.status, "confirmed"),
+            ),
+          )
+          .groupBy(donations.currency)
+      : [];
+
+  const collectedByCurrency: Record<string, number> = {};
+  for (const row of collectedRows) {
+    const code = row.currency || raffle.currency;
+    collectedByCurrency[code] =
+      (collectedByCurrency[code] || 0) + Number(row.total || 0);
+  }
+
   return {
     raffle,
     prizes,
     currencies,
     tickets: ticketRows,
     paymentMethods: methods,
+    collectedByCurrency,
   };
 }
 

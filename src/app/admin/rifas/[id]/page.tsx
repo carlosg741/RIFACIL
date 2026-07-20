@@ -28,6 +28,7 @@ export default async function AdminRaffleDetailPage({
     getRaffleCurrenciesForAdmin(id),
   ]);
   if (!raffle) notFound();
+  const isCollection = raffle.type === "collection";
   const stats = await countTicketStats(raffle.id);
 
   return (
@@ -39,6 +40,7 @@ export default async function AdminRaffleDetailPage({
               {raffle.title}
             </h1>
             <Badge>{raffleStatusLabel[raffle.status]}</Badge>
+            {isCollection && <Badge variant="secondary">Recolecta</Badge>}
           </div>
           <p className="text-muted-foreground">
             <Link href={`/r/${raffle.slug}`} className="underline">
@@ -59,18 +61,19 @@ export default async function AdminRaffleDetailPage({
           <ButtonLink href={`/r/${raffle.slug}`} variant="outline">
             Ver pública
           </ButtonLink>
-          {raffle.status === "drawn" ? (
-            <ButtonLink href={`/r/${raffle.slug}/sorteo`}>
-              Ver resultado
-            </ButtonLink>
-          ) : (
-            <DrawButton
-              raffleId={raffle.id}
-              slug={raffle.slug}
-              drawAt={raffle.drawAt}
-              hasPaidTickets={stats.paid > 0}
-            />
-          )}
+          {!isCollection &&
+            (raffle.status === "drawn" ? (
+              <ButtonLink href={`/r/${raffle.slug}/sorteo`}>
+                Ver resultado
+              </ButtonLink>
+            ) : (
+              <DrawButton
+                raffleId={raffle.id}
+                slug={raffle.slug}
+                drawAt={raffle.drawAt}
+                hasPaidTickets={stats.paid > 0}
+              />
+            ))}
           <DeleteRaffleButton raffleId={raffle.id} title={raffle.title} />
         </div>
       </div>
@@ -89,21 +92,32 @@ export default async function AdminRaffleDetailPage({
 
       <RaffleSharePanel slug={raffle.slug} title={raffle.title} />
 
-      <div className="grid gap-3 sm:grid-cols-4">
-        {[
-          ["Disponibles", stats.available],
-          ["Apartados", stats.reserved],
-          ["Pagados", stats.paid],
-          ["Total", stats.total],
-        ].map(([label, value]) => (
-          <div key={label as string} className="rounded-xl border bg-card p-4">
-            <p className="text-xs text-muted-foreground">{label}</p>
-            <p className="font-binance-num text-2xl font-semibold text-primary">
-              {value}
-            </p>
-          </div>
-        ))}
-      </div>
+      {isCollection ? (
+        <p className="rounded-xl border border-primary/30 bg-secondary/40 px-4 py-3 text-sm text-muted-foreground">
+          Esta es una <span className="text-primary">recolecta</span>: solo
+          recibe donaciones, sin números ni sorteo. Revisa los aportes en{" "}
+          <Link href="/admin/donaciones" className="underline">
+            Donaciones
+          </Link>
+          .
+        </p>
+      ) : (
+        <div className="grid gap-3 sm:grid-cols-4">
+          {[
+            ["Disponibles", stats.available],
+            ["Apartados", stats.reserved],
+            ["Pagados", stats.paid],
+            ["Total", stats.total],
+          ].map(([label, value]) => (
+            <div key={label as string} className="rounded-xl border bg-card p-4">
+              <p className="text-xs text-muted-foreground">{label}</p>
+              <p className="font-binance-num text-2xl font-semibold text-primary">
+                {value}
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
 
       {raffle.status !== "drawn" && (
         <section>

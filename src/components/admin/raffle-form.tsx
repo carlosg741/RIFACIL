@@ -109,7 +109,17 @@ export function RaffleForm({
   const [donationsEnabled, setDonationsEnabled] = useState(
     raffle?.donationsEnabled ?? false,
   );
+  const [type, setType] = useState<"raffle" | "collection">(
+    (raffle?.type as "raffle" | "collection") || "raffle",
+  );
+  const [goalAmount, setGoalAmount] = useState(
+    raffle?.goalAmount ? String(raffle.goalAmount) : "",
+  );
+  const [totalTicketsForConvert, setTotalTicketsForConvert] = useState("100");
   const isEdit = Boolean(raffle);
+  const isCollection = type === "collection";
+  // Al editar: ¿esta rifa era una recolecta sin números? (para permitir convertir)
+  const wasCollection = (raffle?.type as string) === "collection";
   const uploading = uploadingCover || uploadingIndex !== null;
 
   function updatePrize(index: number, patch: Partial<PrizeDraft>) {
@@ -203,41 +213,46 @@ export function RaffleForm({
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
     const drawFromForm = String(fd.get("drawAt") || drawAt || "");
-    if (!drawFromForm) {
+    // Convertir recolecta → rifa también exige fecha de sorteo.
+    if (!isCollection && !drawFromForm) {
       toast.error("Elige la fecha del sorteo");
       return;
     }
-    const normalizedPrizes = prizes.map((prize) => ({
-      title: prize.title.trim(),
-      description: prize.description.trim() || undefined,
-      imageUrl: prize.imageUrl.trim() || undefined,
-    }));
-    if (normalizedPrizes.some((prize) => prize.title.length < 2)) {
-      toast.error("Escribe el nombre de todos los premios.");
-      return;
+
+    // En recolecta no hay premios; usamos el título como referencia.
+    const normalizedPrizes = isCollection
+      ? []
+      : prizes.map((prize) => ({
+          title: prize.title.trim(),
+          description: prize.description.trim() || undefined,
+          imageUrl: prize.imageUrl.trim() || undefined,
+        }));
+    if (!isCollection) {
+      if (normalizedPrizes.some((prize) => prize.title.length < 2)) {
+        toast.error("Escribe el nombre de todos los premios.");
+        return;
+      }
+      if (
+        normalizedPrizes.some((prize) => (prize.description?.length ?? 0) > 2000)
+      ) {
+        toast.error("La descripción de un premio supera los 2000 caracteres.");
+        return;
+      }
+      if (
+        normalizedPrizes.some(
+          (prize) =>
+            prize.imageUrl &&
+            (prize.imageUrl.startsWith("data:") ||
+              prize.imageUrl.length > 2000),
+        )
+      ) {
+        toast.error(
+          "La imagen del premio debe subirse con “Adjuntar imagen” o usar una URL http/https. No pegues la imagen en base64.",
+        );
+        return;
+      }
     }
-    if (
-      normalizedPrizes.some(
-        (prize) => (prize.description?.length ?? 0) > 2000,
-      )
-    ) {
-      toast.error("La descripción de un premio supera los 2000 caracteres.");
-      return;
-    }
-    if (
-      normalizedPrizes.some(
-        (prize) =>
-          prize.imageUrl &&
-          (prize.imageUrl.startsWith("data:") ||
-            prize.imageUrl.length > 2000),
-      )
-    ) {
-      toast.error(
-        "La imagen del premio debe subirse con “Adjuntar imagen” o usar una URL http/https. No pegues la imagen en base64.",
-      );
-      return;
-    }
-    const firstPrize = normalizedPrizes[0]!;
+    const firstPrize = normalizedPrizes[0];
 
     const normalizedCurrencies = currencies.map((item) => ({
       code: item.code.trim().toUpperCase(),
@@ -261,22 +276,31 @@ export function RaffleForm({
     }
     const firstCurrency = normalizedCurrencies[0]!;
 
+    const goalNum = Number(goalAmount);
+    // Números al convertir recolecta → rifa (solo si no tenía números).
+    const convertTickets =
+      isEdit && wasCollection && !isCollection
+        ? Number(totalTicketsForConvert)
+        : Number(fd.get("totalTickets"));
+
     const payload = {
       title: String(fd.get("title") || ""),
       slug: String(fd.get("slug") || "") || undefined,
       description: String(fd.get("description") || ""),
-      prize: firstPrize.title,
+      type,
+      goalAmount: isCollection && goalNum > 0 ? goalNum : undefined,
+      prize: firstPrize?.title ?? String(fd.get("title") || ""),
       pricePerTicket: firstCurrency.pricePerTicket,
       currency: firstCurrency.code,
       currencies: normalizedCurrencies,
-      totalTickets: Number(fd.get("totalTickets")),
+      totalTickets: isCollection ? 0 : convertTickets,
       reservationMinutes: Number(fd.get("reservationMinutes") || 30),
-      winnerCount: normalizedPrizes.length,
-      drawAt: drawFromForm,
+      winnerCount: isCollection ? 1 : normalizedPrizes.length,
+      drawAt: isCollection ? "" : drawFromForm,
       status: status as "draft" | "active" | "closed" | "drawn",
       imageUrl: coverImageUrl.trim(),
-      prizes: normalizedPrizes,
-      donationsEnabled,
+      prizes: isCollection ? undefined : normalizedPrizes,
+      donationsEnabled: isCollection ? true : donationsEnabled,
     };
 
     start(async () => {
@@ -284,14 +308,18 @@ export function RaffleForm({
         const res = await updateRaffle(raffle.id, payload);
         if (!res.ok) toast.error(res.error);
         else {
-          toast.success("Rifa actualizada");
+          toast.success(isCollection ? "Recolecta actualizada" : "Rifa actualizada");
           router.refresh();
         }
       } else {
         const res = await createRaffle(payload);
         if (!res.ok) toast.error(res.error);
         else {
-          toast.success("Rifa creada · copia el link y QR para compartir");
+          toast.success(
+            isCollection
+              ? "Recolecta creada · copia el link y QR para compartir"
+              : "Rifa creada · copia el link y QR para compartir",
+          );
           router.push(`/admin/rifas/${res.id}`);
         }
       }
@@ -317,6 +345,50 @@ export function RaffleForm({
           disabled={isEdit}
         />
       </div>
+      <div className="space-y-2 rounded-xl border border-primary/30 bg-secondary/30 p-4">
+        <Label>Tipo de página</Label>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <button
+            type="button"
+            onClick={() => setType("raffle")}
+            className={`rounded-lg border p-3 text-left transition ${
+              type === "raffle"
+                ? "border-primary bg-primary/10"
+                : "border-border hover:border-primary/50"
+            }`}
+          >
+            <span className="block font-semibold text-primary">
+              Rifa con sorteo
+            </span>
+            <span className="mt-1 block text-xs text-muted-foreground">
+              Números, premios y fecha de sorteo.
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setType("collection")}
+            className={`rounded-lg border p-3 text-left transition ${
+              type === "collection"
+                ? "border-primary bg-primary/10"
+                : "border-border hover:border-primary/50"
+            }`}
+          >
+            <span className="block font-semibold text-primary">
+              Recolecta / Donación
+            </span>
+            <span className="mt-1 block text-xs text-muted-foreground">
+              Solo aportes, sin números ni sorteo.
+            </span>
+          </button>
+        </div>
+        {isEdit && wasCollection !== isCollection && (
+          <p className="text-xs text-amber-400">
+            Estás cambiando el tipo de esta página. Revisa los campos antes de
+            guardar.
+          </p>
+        )}
+      </div>
+
       <div className="space-y-2">
         <Label htmlFor="description">Descripción</Label>
         <Textarea
@@ -330,6 +402,25 @@ export function RaffleForm({
           pública.
         </p>
       </div>
+
+      {isCollection && (
+        <div className="space-y-2 rounded-xl border border-primary/30 bg-secondary/30 p-4">
+          <Label htmlFor="goalAmount">Meta de recaudación (opcional)</Label>
+          <Input
+            id="goalAmount"
+            type="number"
+            min="0"
+            step="0.01"
+            value={goalAmount}
+            onChange={(e) => setGoalAmount(e.target.value)}
+            placeholder="Ej. 5000"
+          />
+          <p className="text-xs text-muted-foreground">
+            Si defines una meta, se mostrará una barra de progreso en la página
+            pública (en la moneda principal). Déjalo vacío para no mostrar meta.
+          </p>
+        </div>
+      )}
       <div className="space-y-3 rounded-xl border border-primary/30 bg-secondary/30 p-4">
         <div>
           <Label>Monedas y precios</Label>
@@ -443,7 +534,7 @@ export function RaffleForm({
           Agregar otra moneda
         </Button>
       </div>
-      {!isEdit && (
+      {!isCollection && !isEdit && (
         <div className="space-y-2">
           <Label htmlFor="totalTickets">Cantidad de números</Label>
           <Input
@@ -460,38 +551,59 @@ export function RaffleForm({
           </p>
         </div>
       )}
-      {isEdit && (
+      {!isCollection && isEdit && !wasCollection && (
         <input type="hidden" name="totalTickets" value={raffle!.totalTickets} />
       )}
-      <div className="space-y-2">
-        <Label htmlFor="reservationMinutes">Minutos de reserva</Label>
-        <Input
-          id="reservationMinutes"
-          name="reservationMinutes"
-          type="number"
-          defaultValue={raffle?.reservationMinutes || 30}
-        />
-        <p className="text-xs text-muted-foreground">
-          Se sorteará un ganador por cada premio agregado.
-        </p>
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="drawAt">Fecha del sorteo</Label>
-        {/* Native input: Base UI datetime-local no propaga bien el valor */}
-        <input
-          id="drawAt"
-          name="drawAt"
-          type="datetime-local"
-          value={drawAt}
-          onChange={(e) => setDrawAt(e.target.value)}
-          className="flex h-9 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-        />
-        {drawAt ? (
-          <p className="text-xs text-primary">Seleccionado: {drawAt.replace("T", " ")}</p>
-        ) : (
-          <p className="text-xs text-muted-foreground">Obligatorio para comunicar la fecha a tus participantes.</p>
-        )}
-      </div>
+      {!isCollection && isEdit && wasCollection && (
+        <div className="space-y-2">
+          <Label htmlFor="totalTicketsConvert">Cantidad de números</Label>
+          <Input
+            id="totalTicketsConvert"
+            type="number"
+            min={10}
+            max={10000}
+            value={totalTicketsForConvert}
+            onChange={(e) => setTotalTicketsForConvert(e.target.value)}
+            required
+          />
+          <p className="text-xs text-muted-foreground">
+            Al convertir la recolecta en rifa se generarán estos números.
+          </p>
+        </div>
+      )}
+      {!isCollection && (
+        <div className="space-y-2">
+          <Label htmlFor="reservationMinutes">Minutos de reserva</Label>
+          <Input
+            id="reservationMinutes"
+            name="reservationMinutes"
+            type="number"
+            defaultValue={raffle?.reservationMinutes || 30}
+          />
+          <p className="text-xs text-muted-foreground">
+            Se sorteará un ganador por cada premio agregado.
+          </p>
+        </div>
+      )}
+      {!isCollection && (
+        <div className="space-y-2">
+          <Label htmlFor="drawAt">Fecha del sorteo</Label>
+          {/* Native input: Base UI datetime-local no propaga bien el valor */}
+          <input
+            id="drawAt"
+            name="drawAt"
+            type="datetime-local"
+            value={drawAt}
+            onChange={(e) => setDrawAt(e.target.value)}
+            className="flex h-9 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+          />
+          {drawAt ? (
+            <p className="text-xs text-primary">Seleccionado: {drawAt.replace("T", " ")}</p>
+          ) : (
+            <p className="text-xs text-muted-foreground">Obligatorio para comunicar la fecha a tus participantes.</p>
+          )}
+        </div>
+      )}
       <div className="space-y-2">
         <Label>Estado</Label>
         <Select
@@ -513,25 +625,27 @@ export function RaffleForm({
           </SelectContent>
         </Select>
       </div>
-      <div className="space-y-3 rounded-xl border border-primary/30 bg-secondary/30 p-4">
-        <label className="flex cursor-pointer items-start gap-3">
-          <input
-            type="checkbox"
-            checked={donationsEnabled}
-            onChange={(e) => setDonationsEnabled(e.target.checked)}
-            className="mt-1 size-4 accent-[var(--primary)]"
-          />
-          <span>
-            <span className="font-medium text-primary">
-              Activar botón “Donar / Colaborar”
+      {!isCollection && (
+        <div className="space-y-3 rounded-xl border border-primary/30 bg-secondary/30 p-4">
+          <label className="flex cursor-pointer items-start gap-3">
+            <input
+              type="checkbox"
+              checked={donationsEnabled}
+              onChange={(e) => setDonationsEnabled(e.target.checked)}
+              className="mt-1 size-4 accent-[var(--primary)]"
+            />
+            <span>
+              <span className="font-medium text-primary">
+                Activar botón “Donar / Colaborar”
+              </span>
+              <span className="mt-1 block text-xs text-muted-foreground">
+                Permite aportes sin tomar números de la rifa. Aparece en el
+                talonario público.
+              </span>
             </span>
-            <span className="mt-1 block text-xs text-muted-foreground">
-              Permite aportes sin tomar números de la rifa. Aparece en el
-              talonario público.
-            </span>
-          </span>
-        </label>
-      </div>
+          </label>
+        </div>
+      )}
 
       <div className="space-y-3 rounded-xl border border-primary/30 bg-secondary/30 p-4">
         <div>
@@ -593,6 +707,7 @@ export function RaffleForm({
         </div>
       </div>
 
+      {!isCollection && (
       <div className="space-y-4 rounded-xl border border-border bg-secondary/30 p-4">
         <div>
           <Label>Premios e imágenes</Label>
@@ -765,12 +880,19 @@ export function RaffleForm({
           Agregar otro premio
         </Button>
       </div>
+      )}
       <Button
         type="submit"
-        disabled={pending || uploading || !drawAt}
+        disabled={pending || uploading || (!isCollection && !drawAt)}
         className="w-full"
       >
-        {pending ? "Guardando…" : isEdit ? "Guardar cambios" : "Crear rifa"}
+        {pending
+          ? "Guardando…"
+          : isEdit
+            ? "Guardar cambios"
+            : isCollection
+              ? "Crear recolecta"
+              : "Crear rifa"}
       </Button>
     </form>
   );

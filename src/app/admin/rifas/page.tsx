@@ -47,13 +47,21 @@ export default async function AdminRafflesPage() {
                   {r.title}
                 </Link>
                 <Badge variant="outline">{raffleStatusLabel[r.status]}</Badge>
+                {r.type === "collection" ? (
+                  <Badge variant="secondary">Recolecta</Badge>
+                ) : null}
                 {isDemoRaffleSlug(r.slug) ? (
                   <Badge variant="secondary">Demo</Badge>
                 ) : null}
               </div>
               <p className="text-sm text-muted-foreground">
-                /r/{r.slug} · {r.totalTickets} números ·{" "}
-                {formatMoney(r.pricePerTicket, r.currency)}
+                /r/{r.slug}
+                {r.type === "collection"
+                  ? " · Solo donaciones"
+                  : ` · ${r.totalTickets} números · ${formatMoney(
+                      r.pricePerTicket,
+                      r.currency,
+                    )}`}
               </p>
             </div>
             <div className="flex flex-wrap gap-2">

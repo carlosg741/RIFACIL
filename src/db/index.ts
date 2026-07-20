@@ -106,6 +106,7 @@ CREATE TABLE IF NOT EXISTS raffles (
   description text,
   prize text NOT NULL,
   image_url text,
+  type text NOT NULL DEFAULT 'raffle',
   price_per_ticket numeric(12,2) NOT NULL,
   currency text NOT NULL DEFAULT 'PEN',
   total_tickets integer NOT NULL,
@@ -114,6 +115,7 @@ CREATE TABLE IF NOT EXISTS raffles (
   status raffle_status NOT NULL DEFAULT 'draft',
   winner_count integer NOT NULL DEFAULT 1,
   donations_enabled boolean NOT NULL DEFAULT false,
+  goal_amount numeric(12,2),
   created_at timestamptz DEFAULT now() NOT NULL,
   updated_at timestamptz DEFAULT now() NOT NULL
 );
@@ -252,6 +254,8 @@ const MIGRATIONS = [
   `ALTER TABLE payment_methods ADD COLUMN IF NOT EXISTS account_info text`,
   `ALTER TABLE payment_methods ADD COLUMN IF NOT EXISTS raffle_id text`,
   `ALTER TABLE raffles ADD COLUMN IF NOT EXISTS donations_enabled boolean NOT NULL DEFAULT false`,
+  `ALTER TABLE raffles ADD COLUMN IF NOT EXISTS type text NOT NULL DEFAULT 'raffle'`,
+  `ALTER TABLE raffles ADD COLUMN IF NOT EXISTS goal_amount numeric(12,2)`,
   `DO $$ BEGIN
     CREATE TYPE donation_status AS ENUM ('pending_payment', 'under_review', 'confirmed', 'rejected');
   EXCEPTION WHEN duplicate_object THEN null; END $$`,

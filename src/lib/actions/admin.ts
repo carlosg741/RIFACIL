@@ -443,6 +443,10 @@ const raffleSchema = z.object({
   title: z.string().min(3).max(120),
   slug: z.string().min(2).max(60).optional(),
   description: z.string().max(2000).optional(),
+  /** "raffle" = rifa con sorteo; "collection" = recolecta/donación sin números */
+  type: z.enum(["raffle", "collection"]).default("raffle"),
+  /** Meta de recaudación opcional (solo recolectas) */
+  goalAmount: z.coerce.number().nonnegative().optional(),
   prize: z.string().min(2).max(200),
   pricePerTicket: z.coerce.number().positive(),
   currency: z.string().min(2).max(6).default("PEN"),
@@ -451,10 +455,10 @@ const raffleSchema = z.object({
     .min(1, "Agrega al menos una moneda.")
     .max(20)
     .optional(),
-  totalTickets: z.coerce.number().int().min(10).max(10000),
+  totalTickets: z.coerce.number().int().min(0).max(10000).optional(),
   reservationMinutes: z.coerce.number().int().min(5).max(1440).default(30),
   winnerCount: z.coerce.number().int().min(1).max(50).default(1),
-  drawAt: z.string().min(1, "Elige la fecha del sorteo"),
+  drawAt: z.string().optional(),
   status: z.enum(["draft", "active", "closed", "drawn"]).default("active"),
   imageUrl: z.string().optional(),
   prizes: z
@@ -495,25 +499,40 @@ export async function createRaffle(raw: z.infer<typeof raffleSchema>) {
     return { ok: false as const, error: msg };
   }
 
-  const drawAt = parseLocalDateTime(parsed.data.drawAt);
-  if (!drawAt) {
-    return { ok: false as const, error: "Fecha del sorteo inválida." };
+  const isCollection = parsed.data.type === "collection";
+
+  // La rifa con sorteo exige fecha; la recolecta no tiene sorteo.
+  const drawAt = isCollection
+    ? null
+    : parseLocalDateTime(parsed.data.drawAt || "");
+  if (!isCollection && !drawAt) {
+    return { ok: false as const, error: "Elige la fecha del sorteo." };
+  }
+
+  const totalTickets = isCollection ? 0 : (parsed.data.totalTickets ?? 0);
+  if (!isCollection && totalTickets < 10) {
+    return {
+      ok: false as const,
+      error: "La rifa necesita al menos 10 números.",
+    };
   }
 
   await ensureSchema();
   const db = await getDb();
   const slug = slugify(parsed.data.slug || parsed.data.title) || nanoid(8);
   const raffleId = nanoid();
-  const prizeRows = parsed.data.prizes?.length
-    ? parsed.data.prizes
-    : [
-        {
-          title: parsed.data.prize,
-          description: undefined,
-          imageUrl: undefined,
-        },
-      ];
-  const primaryPrize = prizeRows[0]!;
+  const prizeRows = isCollection
+    ? []
+    : parsed.data.prizes?.length
+      ? parsed.data.prizes
+      : [
+          {
+            title: parsed.data.prize,
+            description: undefined,
+            imageUrl: undefined,
+          },
+        ];
+  const primaryPrize = prizeRows[0];
 
   const currencyRows = dedupeCurrencies(
     parsed.data.currencies?.length
@@ -554,29 +573,38 @@ export async function createRaffle(raw: z.infer<typeof raffleSchema>) {
     title: parsed.data.title,
     slug,
     description: parsed.data.description || null,
-    prize: primaryPrize.title,
+    type: isCollection ? "collection" : "raffle",
+    // En recolecta no hay premio; guardamos el título como referencia.
+    prize: primaryPrize?.title ?? parsed.data.title,
     /** Imagen de identidad (persona, marca o institución), independiente de los premios */
     imageUrl: parsed.data.imageUrl || null,
     pricePerTicket: primaryCurrency.pricePerTicket.toFixed(2),
     currency: primaryCurrency.code,
-    totalTickets: parsed.data.totalTickets,
+    totalTickets,
     reservationMinutes: parsed.data.reservationMinutes,
-    winnerCount: prizeRows.length,
+    winnerCount: isCollection ? 1 : prizeRows.length,
     drawAt,
     status: parsed.data.status === "drawn" ? "active" : parsed.data.status,
-    donationsEnabled: parsed.data.donationsEnabled,
+    // La recolecta siempre acepta donaciones.
+    donationsEnabled: isCollection ? true : parsed.data.donationsEnabled,
+    goalAmount:
+      isCollection && parsed.data.goalAmount && parsed.data.goalAmount > 0
+        ? parsed.data.goalAmount.toFixed(2)
+        : null,
   });
 
-  await db.insert(rafflePrizes).values(
-    prizeRows.map((prize, index) => ({
-      id: nanoid(),
-      raffleId,
-      title: prize.title,
-      description: prize.description || null,
-      imageUrl: prize.imageUrl || null,
-      position: index + 1,
-    })),
-  );
+  if (prizeRows.length > 0) {
+    await db.insert(rafflePrizes).values(
+      prizeRows.map((prize, index) => ({
+        id: nanoid(),
+        raffleId,
+        title: prize.title,
+        description: prize.description || null,
+        imageUrl: prize.imageUrl || null,
+        position: index + 1,
+      })),
+    );
+  }
 
   await db.insert(raffleCurrencies).values(
     currencyRows.map((item, index) => ({
@@ -588,16 +616,19 @@ export async function createRaffle(raw: z.infer<typeof raffleSchema>) {
     })),
   );
 
-  const rows = Array.from({ length: parsed.data.totalTickets }, (_, i) => ({
-    id: nanoid(),
-    raffleId,
-    number: i,
-    status: "available" as const,
-  }));
+  // Las recolectas no generan números.
+  if (!isCollection && totalTickets > 0) {
+    const rows = Array.from({ length: totalTickets }, (_, i) => ({
+      id: nanoid(),
+      raffleId,
+      number: i,
+      status: "available" as const,
+    }));
 
-  const chunk = 200;
-  for (let i = 0; i < rows.length; i += chunk) {
-    await db.insert(tickets).values(rows.slice(i, i + chunk));
+    const chunk = 200;
+    for (let i = 0; i < rows.length; i += chunk) {
+      await db.insert(tickets).values(rows.slice(i, i + chunk));
+    }
   }
 
   revalidatePath("/admin");
@@ -638,13 +669,45 @@ export async function updateRaffle(
     };
   }
 
-  const nextDrawAt =
-    raw.drawAt !== undefined
+  const nextType = raw.type ?? current.type;
+  const isCollection = nextType === "collection";
+  const wasCollection = current.type === "collection";
+  // Convertir recolecta → rifa: hay que generar números (si aún no existen).
+  const convertingToRaffle = wasCollection && !isCollection;
+
+  let nextDrawAt = isCollection
+    ? null
+    : raw.drawAt !== undefined
       ? parseLocalDateTime(raw.drawAt)
       : current.drawAt;
 
-  if (raw.drawAt !== undefined && !nextDrawAt) {
+  if (!isCollection && raw.drawAt !== undefined && raw.drawAt && !nextDrawAt) {
     return { ok: false as const, error: "Fecha del sorteo inválida." };
+  }
+  if (convertingToRaffle && !nextDrawAt) {
+    return {
+      ok: false as const,
+      error: "Para convertir en rifa, elige la fecha del sorteo.",
+    };
+  }
+
+  // Si convertimos a rifa y no existen números, hay que crearlos.
+  let ticketsToCreate = 0;
+  if (convertingToRaffle) {
+    const existingTickets = await db
+      .select({ id: tickets.id })
+      .from(tickets)
+      .where(eq(tickets.raffleId, id))
+      .limit(1);
+    if (existingTickets.length === 0) {
+      ticketsToCreate = raw.totalTickets ?? 0;
+      if (ticketsToCreate < 10) {
+        return {
+          ok: false as const,
+          error: "Para convertir en rifa, indica al menos 10 números.",
+        };
+      }
+    }
   }
 
   const nextPrizes = raw.prizes?.length ? raw.prizes : undefined;
@@ -682,18 +745,44 @@ export async function updateRaffle(
           ? Number(raw.pricePerTicket).toFixed(2)
           : current.pricePerTicket,
       currency: primaryCurrency?.code ?? raw.currency ?? current.currency,
+      type: nextType,
+      totalTickets:
+        ticketsToCreate > 0 ? ticketsToCreate : current.totalTickets,
       reservationMinutes:
         raw.reservationMinutes ?? current.reservationMinutes,
-      winnerCount: nextPrizes?.length ?? raw.winnerCount ?? current.winnerCount,
+      winnerCount: isCollection
+        ? 1
+        : (nextPrizes?.length ?? raw.winnerCount ?? current.winnerCount),
       drawAt: nextDrawAt,
       status: (raw.status as typeof current.status) ?? current.status,
-      donationsEnabled:
-        raw.donationsEnabled !== undefined
+      donationsEnabled: isCollection
+        ? true
+        : raw.donationsEnabled !== undefined
           ? raw.donationsEnabled
           : current.donationsEnabled,
+      goalAmount:
+        raw.goalAmount !== undefined
+          ? isCollection && raw.goalAmount > 0
+            ? raw.goalAmount.toFixed(2)
+            : null
+          : current.goalAmount,
       updatedAt: new Date(),
     })
     .where(eq(raffles.id, id));
+
+  // Generar números si acabamos de convertir una recolecta en rifa.
+  if (ticketsToCreate > 0) {
+    const rows = Array.from({ length: ticketsToCreate }, (_, i) => ({
+      id: nanoid(),
+      raffleId: id,
+      number: i,
+      status: "available" as const,
+    }));
+    const chunk = 200;
+    for (let i = 0; i < rows.length; i += chunk) {
+      await db.insert(tickets).values(rows.slice(i, i + chunk));
+    }
+  }
 
   if (nextPrizes) {
     await db.delete(rafflePrizes).where(eq(rafflePrizes.raffleId, id));
@@ -1407,6 +1496,12 @@ export async function runDraw(
     .limit(1);
 
   if (!raffle) return { ok: false as const, error: "Rifa no encontrada." };
+  if (raffle.type === "collection") {
+    return {
+      ok: false as const,
+      error: "Una recolecta no tiene sorteo.",
+    };
+  }
   if (raffle.status === "drawn") {
     return { ok: false as const, error: "Esta rifa ya fue sorteada." };
   }

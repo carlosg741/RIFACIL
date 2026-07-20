@@ -29,7 +29,7 @@ export function DonationCheckout({
   raffle: Raffle;
   paymentMethods: PaymentMethod[];
   currencies: CurrencyView[];
-  onBack: () => void;
+  onBack?: () => void;
 }) {
   const router = useRouter();
   const proofRef = useRef<HTMLInputElement>(null);
@@ -115,14 +115,18 @@ export function DonationCheckout({
     });
   }
 
+  const isCollection = raffle.type === "collection";
+
   return (
     <div className="mx-auto max-w-lg space-y-6 rounded-2xl border border-border bg-card p-6 shadow-sm">
       <div>
         <h2 className="font-[family-name:var(--font-display)] text-2xl font-bold text-primary">
-          Completa tu donación
+          {isCollection ? "Haz tu aporte" : "Completa tu donación"}
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Aporta a “{raffle.title}” sin necesidad de tomar un número de la rifa.
+          {isCollection
+            ? `Colabora con “${raffle.title}”. Cada aporte suma.`
+            : `Aporta a “${raffle.title}” sin necesidad de tomar un número de la rifa.`}
         </p>
       </div>
 
@@ -244,14 +248,16 @@ export function DonationCheckout({
       </div>
 
       <div className="flex gap-3">
-        <Button
-          variant="outline"
-          className="flex-1"
-          onClick={onBack}
-          disabled={pending}
-        >
-          Volver
-        </Button>
+        {onBack && (
+          <Button
+            variant="outline"
+            className="flex-1"
+            onClick={onBack}
+            disabled={pending}
+          >
+            Volver
+          </Button>
+        )}
         <Button
           className="flex-1"
           onClick={submit}
