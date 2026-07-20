@@ -167,7 +167,7 @@ export async function getAdminDashboard() {
     .orderBy(desc(orders.createdAt))
     .limit(20);
 
-  // Solo boletos de rifas con sorteo (no contribuciones/donaciones).
+  // Solo boletos de rifas con sorteo reales (excluye contribuciones y la demo).
   const [paidCount] = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(tickets)
@@ -177,6 +177,8 @@ export async function getAdminDashboard() {
         eq(raffles.organizationId, user.organizationId),
         eq(tickets.status, "paid"),
         ne(raffles.type, "collection"),
+        // Excluir rifa demo de la landing y sus archivos (demo, demo-archivo-…)
+        sql`${raffles.slug} <> 'demo' AND ${raffles.slug} NOT LIKE 'demo-%'`,
       ),
     );
 

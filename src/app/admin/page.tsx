@@ -5,8 +5,6 @@ import { ButtonLink } from "@/components/button-link";
 import { formatMoney, orderStatusLabel, raffleStatusLabel } from "@/lib/format";
 import { ReleaseExpiredButton } from "@/components/admin/release-expired-button";
 
-export const dynamic = "force-dynamic";
-
 export default async function AdminDashboardPage() {
   const data = await getAdminDashboard();
 
@@ -36,7 +34,7 @@ export default async function AdminDashboardPage() {
         <Stat
           label="Boletos pagados"
           value={String(data.paidTickets)}
-          hint="Solo rifas con sorteo"
+          hint="Rifas con sorteo · sin demo"
         />
         <Stat
           label="Donaciones confirmadas"
